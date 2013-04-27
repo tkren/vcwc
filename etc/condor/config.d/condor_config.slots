@@ -1,0 +1,65 @@
+# Machine slots setup for HTCondor
+#
+# Thomas Krennwallner <tkren@kr.tuwien.ac.at> 2012
+#
+# Based on:
+# https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=WholeMachineSlots
+# https://lists.cs.wisc.edu/archive/htcondor-users/2007-June/msg00295.shtml
+#
+
+# we have (i) sequential jobs, (ii) parallel jobs, and (iii) dynamic jobs
+MAX_SLOT_TYPES = 3
+
+# we will allocate resources MAX_SLOT_TYPES times to overlapping slots
+NUM_CPUS = $(DETECTED_CORES) * $(MAX_SLOT_TYPES)
+MEMORY = $(DETECTED_MEMORY) * $(MAX_SLOT_TYPES)
+
+# we are pure computation machines, so don't care about idle console/keyboard
+SLOTS_CONNECTED_TO_CONSOLE = 0
+SLOTS_CONNECTED_TO_KEYBOARD = 0
+DISCONNECTED_KEYBOARD_IDLE_BOOST = 1200
+
+#
+# Hardware setup as reported by numactl:
+#
+#  $ numactl --hardware
+#  available: 4 nodes (0-3)
+#  node 0 cpus: 0 1 2 3 4 5
+#  node 0 size: 32766 MB
+#  node 0 free: 31224 MB
+#  node 1 cpus: 6 7 8 9 10 11
+#  node 1 size: 32768 MB
+#  node 1 free: 31676 MB
+#  node 2 cpus: 18 19 20 21 22 23
+#  node 2 size: 32768 MB
+#  node 2 free: 31651 MB
+#  node 3 cpus: 12 13 14 15 16 17
+#  node 3 size: 32768 MB
+#  node 3 free: 31706 MB
+#  node distances:
+#  node   0   1   2   3 
+#    0:  10  16  16  16 
+#    1:  16  10  16  16 
+#    2:  16  16  10  16 
+#    3:  16  16  16  10 
+#
+
+# number of (evenly sized) cpu nodes
+NUM_CPUNODES = 4
+# number of all cpus in a node
+MAX_NODECPUS = 6
+# amount of memory in a node divided by $(MAX_SLOT_TYPES)
+MAX_NODEMEMS = 1/12
+
+# single-core slots each get 1 core and $(MAX_NODEMEMS) on one of the 4 cpu nodes
+SLOT_TYPE_1 = cpus=1, mem=$(MAX_NODEMEMS)
+NUM_SLOTS_TYPE_1 = $(NUM_CPUNODES)
+
+# full node slots each get $(MAX_NODECPUS) cores and $(MAX_NODEMEMS) on one of the 4 cpu nodes
+SLOT_TYPE_2 = cpus=$(MAX_NODECPUS), mem=$(MAX_NODEMEMS)
+NUM_SLOTS_TYPE_2 = $(NUM_CPUNODES)
+
+# dynamic machine slot gets as many cores and RAM as the machine has
+SLOT_TYPE_3 = cpus=$(DETECTED_CORES), mem=$(DETECTED_MEMORY)
+SLOT_TYPE_3_PARTITIONABLE = True
+NUM_SLOTS_TYPE_3 = 1

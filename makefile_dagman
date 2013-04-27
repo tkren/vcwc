@@ -1,0 +1,268 @@
+###################################################################################
+# Makefile for creating a DAGMan track execution workflow for solver competitions #
+# 										  #
+# Copyright (C) 2013  Thomas Krennwallner <tkren@kr.tuwien.ac.at>		  #
+# Copyright (C) 2013  Martin Schwengerer <mschweng@kr.tuwien.ac.at>		  #
+# 										  #
+# This file is part of VCWC.							  #
+# 										  #
+#  VCWC is free software: you can redistribute it and/or modify		  #
+#  it under the terms of the GNU General Public License as published by	  #
+#  the Free Software Foundation, either version 3 of the License, or		  #
+#  (at your option) any later version.						  #
+# 										  #
+#  VCWC is distributed in the hope that it will be useful,			  #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of		  #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the		  #
+#  GNU General Public License for more details.				  #
+# 										  #
+#  You should have received a copy of the GNU General Public License		  #
+#  along with VCWC.  If not, see <http://www.gnu.org/licenses/>.		  #
+###################################################################################
+
+
+TOOL=vcwc
+TOOL_VERSION=0.1
+
+M4=m4
+
+# helpers for $(subst) calls
+comma := ,
+empty:=
+space:= $(empty) $(empty)
+
+TRACKINFO_FILE=trackinfo.mk
+
+# import data from file
+include $(TRACKINFO_FILE)
+
+$(info Welcome to $(TOOL) $(TOOL_VERSION))
+$(info generating workflow for track $(TRACK) with following setup:)
+$(info - benchmarks: $(strip $(BENCHMARKS)))
+$(info - all participants: $(sort $(notdir $(strip $(PARTICIPANTS)))))
+$(info - benchmarks/participants: $(strip $(PARTICIPANTS)))
+$(info - runs: $(RUNS))
+
+# status file
+TRACK_STATUS_FILE := $(TRACK)_status
+TRACK_STATUS_UPDATE := 30
+
+# new variables
+TAG_RUN := R
+TAG_STATS := S
+TAG_BMRANKING := B
+TAG_SINK := T
+ROOT_NODE := R
+
+# sub-dag for splicing off runs 
+RUN_DAG := $(CONDOR_SUBMIT_DESCRIPTIONS_DIR)/run.dag
+
+# condor submit description files
+ROOT_NODE_CONDOR := r.condor
+TRACK_RANKING_CONDOR := $(CONDOR_SUBMIT_DESCRIPTIONS_DIR)/trackranking.condor
+BMRANKING_CONDOR := $(CONDOR_SUBMIT_DESCRIPTIONS_DIR)/bmranking.condor
+STATS_CONDOR := $(CONDOR_SUBMIT_DESCRIPTIONS_DIR)/stats.condor
+
+INSTANCE_SUBFILE := instance.sub
+STATSRULE_SUBFILE := statsrule.sub
+BMRANKING_SUBFILE := bmranking.sub
+
+RUN_INSTANCE_PROFILE := run.profile
+
+INSTANCE_MACRO := instance.m4
+STATSRULE_MACRO := statsrule.m4
+BMRANKING_MACRO := bmranking.m4
+TRACKEXEC_MACRO := trackexec.m4
+RUNPROFILE_MACRO := runprofile.m4
+
+BMRANKING_SUBFILES := $(BENCHMARKS:%=$(DAGMAN_DIR)/%/$(BMRANKING_SUBFILE))
+
+TRACKEXEC_DAG := trackexec.dag
+VERSION_FILE := $(TRACKEXEC_DAG).version
+
+# the current version of the workflow
+VERSION := $(shell mkdir -p $(DAGMAN_DIR) ; test -f $(DAGMAN_DIR)/$(VERSION_FILE) || echo "000" > $(DAGMAN_DIR)/$(VERSION_FILE) ; cat $(DAGMAN_DIR)/$(VERSION_FILE) )
+
+COUNTER_FLAG := 1
+TIMESTAMP := $(shell date --rfc-3339=seconds)
+
+$(info - workflow version: $(VERSION))
+$(info - timestamp: $(TIMESTAMP))
+
+
+#where-am-i=$(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
+
+.PHONY: all
+.SUFFIXES:
+
+all: $(DAGMAN_DIR) $(PROFILE_DIR) $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
+
+$(DAGMAN_DIR):
+	@mkdir -pv $@
+
+$(PROFILE_DIR):
+	@mkdir -pv $@
+
+##################################################
+# StatsRule
+# $(1)...benchmark name
+# $(2)...participant name
+##################################################
+define StatsRule
+
+$(eval RUN_DIR := $(DAGMAN_DIR)/$(1)/$(2))
+$(eval PROFILE_BP_DIR := $(PROFILE_DIR)/$(1)/$(2))
+$(eval BM_INST := $(notdir $(filter $(1)/%, $(INSTANCES))))
+$(eval BM_NUMINST := $(notdir $(filter $(1)/%, $(NUM_INSTANCES))))
+$(eval INSTANCE_SUBFILES := $(foreach I,$(BM_NUMINST),$(foreach R,$(RUNS),$(RUN_DIR)/$I/$R/$(INSTANCE_SUBFILE))))
+$(eval INSTANCE_PROFILES := $(foreach I,$(BM_INST),$(PROFILE_BP_DIR)/$I/$(RUN_INSTANCE_PROFILE)))
+
+all: $(RUN_DIR)/$(STATSRULE_SUBFILE) $(INSTANCE_PROFILES)
+
+$(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE): $(RUNPROFILE_MACRO)
+	$$(eval INST=$$(patsubst $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE),%,$$@))
+	$$(eval SPLIT=$$(subst -,$(space),$$(INST)))
+	$$(eval ARGV1=$$(word 3,$$(SPLIT)))
+	$$(eval ARGV2=$$(basename $$(word 4,$$(SPLIT))))
+	$$(eval ARGV3=$$(shell cat $(OUTPUTPRED_DIR)/$$(subst b,,$(1))-*.txt))
+	$$(eval BASE=$$(dir $$@))
+	@mkdir -p $$(BASE) ; \
+	$(M4) vcwc-helpers.m4 \
+		-DTOOL=$(TOOL) \
+		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DTRACK=$(TRACK) -DBENCH=$(1) -DPART=$(2) \
+		-DTRACK_DIR="$(TRACK_DIR)/profiles" \
+		-DBENCHMARKS_DIR="$(BENCHMARKS_DIR)" \
+		-D__INSTANCE__="$$(INST)" \
+		-D__ARGV1__=$$(ARGV1) \
+		-D__ARGV2__=$$(ARGV2) \
+		-D__ARGV3__=$$(ARGV3) $$< > $$@
+
+$(RUN_DIR)/%/$(INSTANCE_SUBFILE): $(INSTANCE_MACRO)
+	$$(eval export VERSION := $$(shell test $$(COUNTER_FLAG) -eq 1 && printf "%.3d\n" "$$$$(($$(VERSION) + 1))" || echo $$(VERSION)))
+	@test $$(COUNTER_FLAG) -eq 0 || echo $$(VERSION) > $$(DAGMAN_DIR)/$$(VERSION_FILE)
+	$$(eval export COUNTER_FLAG := 0)
+	@mkdir -p $(RUN_DIR)/$$* ; \
+	mkdir -p $(STATS_DIR)/$(TRACK)/$(1)/$(2)/$$* ; \
+	$(M4) vcwc-helpers.m4 \
+		-DTOOL=$(TOOL) \
+		-DFILE=$(TRACK)/$(1)/$(2)/$$(patsubst $(RUN_DIR)/%,%,$$@) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DSUBMITDIR=$(STATS_DIR)/$(TRACK)/$(1)/$(2)/$$* \
+		-DRUN_DAG=$(RUN_DAG) \
+		-DJOBNAME=$(TRACK)/$(1)/$(2)/$$* \
+		-DVERSION=$$(VERSION) $$< > $$@ ; \
+	echo $(TAG_RUN)/$(TRACK)/$(1)/$(2)/$$*/$$(VERSION) > $$@.version
+
+$(RUN_DIR)/$(STATSRULE_SUBFILE): $(STATSRULE_MACRO) $(INSTANCE_SUBFILES)
+	$$(eval ALLRUNS := $$(shell cat $(patsubst %.sub,%.sub.version,$(INSTANCE_SUBFILES))))
+	$$(eval SPLICES := $$(subst $$(space),$$(comma),$$(strip $(INSTANCE_SUBFILES))))
+	$$(info compiling $$(words $$(ALLRUNS)) runs for $(TAG_STATS)/$(TRACK)/$(1)/$(2)/$(VERSION))
+	@test -f $$@ && cp $$@ $$@.previous ; \
+	$(M4) vcwc-helpers.m4 \
+		-DTOOL=$(TOOL) \
+		-DFILE=$(TRACK)/$(1)/$(2)/$$(patsubst $(RUN_DIR)/%,%,$$@) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DSPLICES=$$(SPLICES) \
+		-DJOBNAME=$(TRACK)/$(1)/$(2) \
+		-DVERSION=$$(VERSION) \
+		-DSTATS_CONDOR=$(STATS_CONDOR) \
+		-DSUBMITDIR=$(STATS_DIR)/$(TRACK)/$(1)/$(2) \
+		-DVERSION_OLD=$$(shell test -f $(RUN_DIR)/$(STATSRULE_SUBFILE).version && cat $(RUN_DIR)/$(STATSRULE_SUBFILE).version || echo "-") \
+		-DALLRUNS="$$(ALLRUNS)" $$< > $$@ ; \
+	echo $(TAG_STATS)/$(TRACK)/$(1)/$(2)/$$(VERSION) > $$@.version
+
+endef
+############# End StatsRule ################
+
+
+##################################################
+# BmRankingRule
+# $(1)...bm name
+##################################################
+define BmRankingRule
+
+$(eval BM_PARTS := $(notdir $(filter $(1)/%, $(PARTICIPANTS))))
+
+# generate rules for participant ranking and instance runs
+$(foreach p,$(BM_PARTS),$(eval $(call StatsRule,$(1),$(p))))
+
+$(eval RUN_DIR := $(DAGMAN_DIR)/$(1))
+$(eval STATS_SUBFILES := $(BM_PARTS:%=$(RUN_DIR)/%/$(STATSRULE_SUBFILE)))
+
+all: $(RUN_DIR)/$(BMRANKING_SUBFILE)
+
+$(RUN_DIR)/$(BMRANKING_SUBFILE): $(BMRANKING_MACRO) $(STATS_SUBFILES)
+	$$(eval ALLPARTICIPANTS := $$(shell cat $(patsubst %.sub,%.sub.version,$(STATS_SUBFILES))))
+	$$(eval STATS_SUBFILE_LIST := $$(subst $$(space),$$(comma),$$(strip $(STATS_SUBFILES))))
+	$$(info compiling $$(words $$(ALLPARTICIPANTS)) participants for $(TAG_BMRANKING)/$(TRACK)/$(1)/$(VERSION))
+	@test -f $$@ && cp $$@ $$@.previous ; \
+	$(M4) vcwc-helpers.m4 \
+		-DTOOL=$(TOOL) \
+		-DFILE=$(TRACK)/$(1)/$$(patsubst $(RUN_DIR)/%,%,$$@) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DSTATS_SUBFILES=$$(STATS_SUBFILE_LIST) \
+		-DJOBNAME=$(TRACK)/$(1) \
+		-DVERSION=$$(VERSION) \
+		-DBMRANKING_CONDOR=$(BMRANKING_CONDOR) \
+		-DSUBMITDIR=$(STATS_DIR)/$(TRACK)/$(1) \
+		-DVERSION_OLD=$$(shell test -f $(RUN_DIR)/$(BMRANKING_SUBFILE).version && cat $(RUN_DIR)/$(BMRANKING_SUBFILE).version || echo "-") \
+		-DALLPARTICIPANTS="$$(ALLPARTICIPANTS)" $$< > $$@ ; \
+	echo $(TAG_BMRANKING)/$(TRACK)/$(1)/$$(VERSION) > $$@.version
+
+endef
+############# End BmRankingRule ################
+
+# generate rules for benchmark ranking
+$(foreach b,$(BENCHMARKS),$(eval $(call BmRankingRule,$(b))))
+
+# link all sub-files together
+$(DAGMAN_DIR)/$(TRACKEXEC_DAG): $(TRACKEXEC_MACRO) $(BMRANKING_SUBFILES)
+	$(eval ALLBENCHMARKS := $(shell cat $(patsubst %.sub,%.sub.version,$(BMRANKING_SUBFILES))))
+	$(eval BMRANKING_SUBFILE_LIST := $(subst $(space),$(comma),$(strip $(BMRANKING_SUBFILES))))
+	$(info linking $(words $(ALLBENCHMARKS)) benchmarks for $(TAG_SINK)/$(TRACK)/$(VERSION))
+	@test -f $@ && cp $@ $@.previous ; \
+	$(M4) vcwc-helpers.m4 vcwc-linker.m4 \
+		-DFILE=$(patsubst $(RUN_DIR)/%,%,$$@) \
+		-DTOOL=$(TOOL) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DTRACK_STATUS_FILE=$(TRACK_STATUS_FILE) \
+		-DTRACK_STATUS_UPDATE=$(TRACK_STATUS_UPDATE) \
+		-DROOT_NODE_CONDOR=$(ROOT_NODE_CONDOR) \
+		-DTRACK_RANKING_CONDOR=$(TRACK_RANKING_CONDOR) \
+		-DBMRANKING_SUBFILES=$(BMRANKING_SUBFILE_LIST) \
+		-DJOBNAME=$(TRACK) \
+		-DVERSION=$(VERSION) \
+		-DSUBMITDIR=$(STATS_DIR)/$(TRACK)/$(1) \
+		-DALLBENCHMARKS="$(ALLBENCHMARKS)" $< > $@
+
+
+
+# delete the complete result directory
+# note: should we add some confirmation-dialog for safety reasons?
+clean:
+	@echo FIXME
+
+show:
+	@condor_q -wide -dag | less -S
+
+submit:
+	@cd $(DAGMAN_DIR) ; condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
+
+$(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt:
+	touch $(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt
+
+halt: $(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt
+
+hold:
+	@echo FIXME
+
+release:
+	@echo FIXME
+
+
+
+## Local Variables:
+## mode: makefile-gmake
+## End:

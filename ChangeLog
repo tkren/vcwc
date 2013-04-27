@@ -1,0 +1,296 @@
+2013-03-18  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* condor/report_instance.condor: Remove reporting facility.
+	* makefile_dagman: Likewise.
+	* statsrule.m4: Likewise.
+
+	* condor/run.dag: Remove PRE script.
+	* instance.m4: Likewise.
+
+	* condor/check_instance.condor (arguments): Fix jobname offset.
+	* condor/run_instance.condor: Likewise.
+	* condor/stats_instance.condor: Likewise.
+
+	* condor/run_instance.condor (request_memory): In MiB instead of KiB.
+	* condor/check_instance.condor: Likewise.
+
+	* instance.m4: Add PRE script.
+	* condor/run.dag: Likewise.
+
+	* runprofile.m4: Include track, benchmark, and participant profiles.
+
+	* statsrule.m4: EOF.
+	* bmranking.m4: Likewise.
+
+	* trackexec.m4: Fixed-length version string.
+	* makefile_dagman: Likewise.
+
+2013-03-13  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run: Sample run script for competition participants, noops
+	SIGXCPU and SIGTERM and returns the left-most non-zero exit code
+	in a pipeline.
+
+2013-02-21  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* makefile_dagman: Avoid sub-shells and use simply expanded variables to speed-up processing.
+	* trackinfo.mk: Likewise.
+
+	* vcwc-helpers.m4: Fix file templates.
+	* trackexec.m4: Likewise.
+	* statsrule.m4: Likewise.
+	* runprofile.m4: Likewise.
+	* instance.m4: Likewise.
+	* bmranking.m4: Likewise.
+
+2013-02-20  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* makefile_dagman: Store profiles in PROFILE_DIR.
+	Speedup compilation.
+	* trackinfo.mk: Likewise.
+
+2013-02-19  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* etc/schroot/chroot.d/aspcomp: Add image for benchmark checkers.
+
+	* makefile_dagman: Extract instance number from NUM-BMNAME-MAXINT-MAXLEVEL.asp files.
+	Generate profiles for run.sh.
+	* runprofile.m4: Likewise.
+	* trackprofile.sh: Likewise.
+
+	* trackinfo.mk: Add TRACK_DIR.
+
+2013-02-13  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* vcwc-linker.m4: Add support for macros within dagman comments.
+	* vcwc-helpers.m4: Likewise.
+	* trackexec.m4: Likewise.
+	* statsrule.m4: Likewise.
+	* instance.m4: Likewise.
+	* bmranking.m4: Likewise.
+	* makefile_dagman: Likewise.
+
+2013-02-12  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* trackinfo.mk (NO_RUNS_END): Setup for 3 runs.
+
+	* bmranking.m4: Add support for DAG linking.
+	Store latest JOB name in version files.
+	* vcwc-helpers.m4: Likewise.
+	* trackexec.m4: Likewise.
+	* statsrule.m4: Likewise.
+	* makefile_dagman: Likewise.
+
+2013-02-10  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* trackinfo.mk: Use Makefile built-ins instead of shell calls.
+
+	* makefile_dagman: Use M4 macros instead of echo bonanza.
+
+	* trackexec.m4: Add M4 macro support.
+	* statsrule.m4: Likewise.
+	* instance.m4: Likewise.
+	* bmranking.m4: Likewise.
+
+2013-02-08  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* makefile_dagman: Speed up dag generation by factor 2.
+	* trackinfo.mk: Likewise.
+
+2013-02-06 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+
+        * makefile_dagman: fixed \\-characters, fixed versioning (version 0 is not only used for the root and the sink node)
+
+	* trackinfo.mk: renamed runs from 000 to r000
+
+2013-02-05  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* etc/sudoers.d/aspcomp: Update sudoers.
+
+	* asprun.dag: Create target directories in PRE scripts.
+
+	* trackinfo.mk: Fix directories.
+
+	* makefile_dagman (clean): Disable.
+	Update version file.
+	Output hierarchy is now in DAGMAN_DIR.
+	Refactoring.
+
+2013-02-01 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+	* makefile_dagman: added code to generate one big dag-file unsing TKs jobname-encoding
+	* trackinfo.mk: added and removed some variables
+
+2013-01-31  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* aspexec.dag: Reuse edges.
+
+2013-01-30  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run_instance.condor: Direct encoding of argument run paths in
+	nodes.
+	* aspexec.dag: Likewise.
+
+2013-01-29  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run_instance.condor: Create argument string based on spliced dag
+	node name.
+
+	* asprun.dag: Add subdag for tracking all dependencides within a
+	run.
+
+	* aspexec.dag: Add subdag splicing and encode node names for
+	identifying run directories.
+
+2013-01-28 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+	* makefile_dagman: added code to create dag-files for statistics and reports when an solver finished all instances of an benchmark set.
+
+2013-01-24 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+	* makefile_dagman: new file for using dagman to manage the different condor-jobs
+
+	* trackinfo.mk: changes for finding the instances in the benchmark directory, minor renaming stuff
+
+	* makefile_checker: removed variable for the used condor scheduler
+
+	* makefile_solver: removed variable for the used condor scheduler
+
+2012-12-17  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* trackinfo.mk: Use absolute pathnames.
+
+	* trackchecker.mk: Renamed from trackinfofile_checker.txt.
+
+	* makefile_checker: Add generic run target.
+
+	* makefile_solver: Beautification.
+	Add support for single instance files.
+
+	* trackinfofile.txt: Likewise.
+
+	* instance_mapping.csv: Remove.
+
+2012-12-11 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+
+	* makefile_solver: Adapted new structure using one config-file as parameter for the condor jobs
+	* trackinfofile.txt: minor modifications for finding the instances
+	* makefile_checker: started modifications for using a config-file
+
+2012-11-26 Martin Schwengerer <mschweng@kr.tuwien.ac.at>
+
+	* makefile_solver: Changed file structure - new level "benchmark group"
+	* makefile_checker: Likewise.
+	* trackInfoFile.txt: renamed to trackinfofile.txt, renamed some variables.
+	* trackInfoFile_checker.txt: renamed to trackinfofile_checker.txt, renamed some variables.
+
+2012-11-23  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Beautification.
+
+	* trackInfoFile_checker.txt: Add emacs file variables.
+	* trackInfoFile.txt: Likewise.
+	* makefile_solver: Likewise.
+	* makefile_checker: Likewise.
+
+	* etc/cgconfig.conf: Add aspcomp2013 memory group
+
+2012-11-06  Martin Schwengerer  <mschweng@kr.tuwien.ac.at>
+
+	* makefile: renamed makefile to makefile_solver
+
+	* makefile_checker: added makefile for the checking-process
+
+        * trackInfoFile_checker.txt: Added file containing information for makefile_checker
+
+	* instance_mapping.csv: template for the file mapping the scrambled instances to the original instances
+
+2012-11-15  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Report used cgroups.
+
+	* etc/cgconfig.conf: Disallow memory pages on swap space.
+	Use a hierarchical cgroup scheme: cgexec -g cpuset,memory:cpunodeX
+	and cgexec -g cpuset:cpunodeX/cpuY resp.
+
+2012-11-14  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Add support for limiting cpu time (ulimit -t) and wall
+	clock time (timeout).
+
+	* etc/cgconfig.conf: Add runcpunode[0-3] and runcpu{0,6,12,18} for
+	parallel and sequential tracks.  Use cgexec -g cpuset:runcpunodeX
+	/path/to/run.sh ... or cgexec -g cpuset:runcpuY /path/to/run.sh
+	... for parallel and sequential tracks, respectively.
+	Fix crazy NUMA layout of the lion: node 2/3 have cpus 18-23/12-17.
+
+2012-11-07  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Do not ack PIDs of mothership.
+
+2012-11-06  Martin Schwengerer  <mschweng@kr.tuwien.ac.at>
+
+        * makefile: Added makefile for creating the directory structure
+
+	* trackInfoFile.txt: Added file containing information like a list of the solvers and the instances
+
+2012-11-06  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Add support for timestamped stdout and stderr: each line
+	gets a timestamp in syslog format with subsecond resolution.
+	Add support for timeout --preserve-status.
+	Add support for sending solver input to stdin (USESTDIN).
+	Log memory usage (Max. resident set size).
+
+2012-10-24  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: More error checking.
+	Include timings from LOGERR in LOGRUN.
+	Attach compressed LOGRUN.
+
+	* condor_run_instance: Initial condor driver.
+
+	* aspCompetitionDaemon.sh: Remove gibberish.
+
+2012-10-21  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Log more statistics and hardware info.
+	Remove stdout/stderr from log spoolfile, keep the run directory instead.
+
+2012-10-20  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* etc/cgrules.conf: Initial support for cpuset.
+	* etc/cgconfig.conf: Likewise.
+
+	* run.sh: Add support for locking LOG.
+	Add support for killing the solver session leader and all its
+	children.
+
+2012-10-17  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* potassco.sh: Add driver script for ground-solving pipelines.
+
+	* run.sh: Use timeout instead of timelimit for limiting
+	shell-scripts.
+	Do not save sent mail in mutt, may cause left-over lock files.
+	Use mktemp for intermediate files.
+	Set return value to 170 in case LOG hits the maximum file
+	size before we could start the solver.
+	Add Finish record.
+
+2012-10-16  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Update benchmark driver script.
+
+2012-10-03  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.makefile: Add initial makefile for running solvers (based on
+	KR'12 bidding).
+
+2012-09-22  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* run.sh: Add initial run script.
+	* run-profile.template: Likewise.
+
+2012-09-20  Thomas Krennwallner  <tkren@kr.tuwien.ac.at>
+
+	* aspCompetitionDaemon.sh: Add logging and bailout functions.
+	Fix typo.
+

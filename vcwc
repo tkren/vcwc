@@ -1,0 +1,58 @@
+#!/bin/bash
+
+#########################################################################
+# VCWC wrapper script.						        #
+# 								        #
+# Copyright (C) 2013  Thomas Krennwallner <tkren@kr.tuwien.ac.at>       #
+# 								        #
+# This file is part of VCWC.					        #
+# 								        #
+#  VCWC is free software: you can redistribute it and/or modify	        #
+#  it under the terms of the GNU General Public License as published by #
+#  the Free Software Foundation, either version 3 of the License, or    #
+#  (at your option) any later version.				        #
+# 								        #
+#  VCWC is distributed in the hope that it will be useful,	        #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of       #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        #
+#  GNU General Public License for more details.			        #
+# 								        #
+#  You should have received a copy of the GNU General Public License    #
+#  along with VCWC.  If not, see <http://www.gnu.org/licenses/>.        #
+#########################################################################
+
+#set -x
+
+MAKE=make
+
+if [ $# -lt 1 ]
+then
+    echo vcwc: Missing trackinfo argument. >&2
+    exit 1
+elif [ $# -gt 1 ]
+then
+    target=$2
+else
+    target=all
+fi
+
+vcwc_dir=$(dirname $0)
+makefile_dagman=$vcwc_dir/makefile_dagman
+trackinfo=$1
+
+if [ ! -r $trackinfo ]
+then
+    echo vcwc: Could not access $trackinfo >&2
+    exit 1
+fi
+
+if [ -d $trackinfo ]
+then
+    if [ ! -f $trackinfo/trackinfo.mk ]; then echo vcwc: $trackinfo/trackinfo.mk: No such file or directory >&2 ; exit 1 ; fi
+    args="-I $trackinfo"
+else
+    args="-e TRACKINFO_FILE=$(basename $trackinfo) -I $(dirname $trackinfo)"
+fi
+
+#$MAKE --no-print-directory --no-builtin-rules --no-builtin-variables --makefile=$makefile_dagman $args $target
+$MAKE --jobs --no-print-directory --no-builtin-rules --no-builtin-variables --makefile=$makefile_dagman $args $target

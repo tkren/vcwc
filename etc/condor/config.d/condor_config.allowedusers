@@ -1,0 +1,10 @@
+# Only start jobs if:
+# 1) the job is owned by the allowed users, AND
+# 2) the load average is low enough OR the machine is currently
+#    running a Condor job, and would therefore accept running
+#    a different one
+AllowedUser    = ( (User == "tkren@kr.tuwien.ac.at") || \
+                   (User == "mschweng@kr.tuwien.ac.at") || \
+                   (User == "tkren@kr.tuwien.ac.at") )
+NoOwnerLoad    = ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner") )
+START          = $(AllowedUser) && $(NoOwnerLoad)

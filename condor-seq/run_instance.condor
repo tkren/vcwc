@@ -1,0 +1,54 @@
+# benchmark execution wrapper
+
+basedir = $ENV(HOME)
+runas = aspexec
+
+executable = /home/aspcomp/condor-seq/run_instance.sh
+universe   = vanilla
+
+# working dir will be set by condor_dagman
+#initialdir = /path/to/run/logs
+
+#input     = test.data # hm, stdin...
+
+# output and error is hopefully empty
+output     = exec_$(cluster)_$(process).out
+error      = exec_$(cluster)_$(process).err
+
+# condor log will be set by condor_dagman
+#log =
+
+
+# condor will transfer the executable, input, output, error back to the
+# submission machine
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+
+notification = Error
+notify_user = tkren@kr.tuwien.ac.at
+
+requirements = IS_SEQCOMP_MACHINE && ( \
+	     machine == "node2.kr.tuwien.ac.at" || \
+	     machine == "node3.kr.tuwien.ac.at" || \
+	     machine == "node4.kr.tuwien.ac.at" )
++RequiresSeqcompMachine = True
+
+request_cpus = 1
+request_memory = 6144
+
+environment = TIMEOUT=600 ; MEMOUT=$$([TARGET.Memory * 1024]); MAXFILESIZE=10240
+
+# arguments will be set by condor_dagman
+#
+# DAG spliced nodes have the form JOB+NODE.  In our setting we set JOB
+# to R/tTT/bBB/sSS/iIIII/rRR/NNN from which we can extract the information
+# for building the arguments for our executable.
+#
+# 0 2   6   10  14    20   25  29
+# R/t01/b01/s01/i0001/r000/000+EXEC
+#
+thejob=$$([substr(""$(jobname)"",2,-9)])
+arguments  = "$(runas) $(basedir)/$(thejob)/run.profile /home/$(runas)/$(thejob)"
+
+# number of runs
+queue 1

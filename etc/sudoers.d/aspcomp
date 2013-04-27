@@ -1,0 +1,4 @@
+Runas_Alias	ASPEXCK = aspexec, aspck
+
+# aspstat can run commands as aspexec or aspck without a password
+aspstat		ALL = (ASPEXCK) NOPASSWD: ALL

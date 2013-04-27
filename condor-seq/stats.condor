@@ -1,0 +1,41 @@
+# benchmark execution wrapper
+
+basedir = $ENV(HOME)
+
+executable = $(basedir)/bin/stats.sh
+universe   = vanilla
+
+# working dir will be set by condor_dagman
+#initialdir = /path/to/run/logs
+
+#input     = test.data # hm, stdin...
+
+# output and error is hopefully empty
+output     = stats_$(cluster)_$(process).out
+error      = stats_$(cluster)_$(process).err
+
+# condor log will be set by condor_dagman
+#log =
+
+notification = Error
+notify_user = tkren@kr.tuwien.ac.at
+
+requirements = machine == "lion.kr.tuwien.ac.at"
+
+request_cpus = 1
+request_memory = 512
+
+#environment = 
+
+# arguments will be set by condor_dagman
+#
+# In our setting we set JOB to S/tTT/bBB/sSS/NNN from which we can
+# extract the information for building the arguments for our executable.
+#
+# 0 2   6   10  14
+# S/t01/b01/s01/000
+#
+arguments  = "$(basedir)/$$([substr(""$(jobname)"",2,-4)])"
+
+# number of runs
+queue 1

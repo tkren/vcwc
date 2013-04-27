@@ -1,0 +1,2 @@
+# /etc/condor/condor_config.local
+# empty by default, local configuration goes into /etc/condor/config.d/

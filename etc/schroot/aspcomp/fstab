@@ -1,0 +1,9 @@
+# fstab: static file system information for chroots.
+# Note that the mount point will be prefixed by the chroot path
+# (CHROOT_PATH)
+#
+# <file system>	<mount point>	<type>	<options>	<dump>	<pass>
+/proc		/proc		none    rw,bind        0       0
+/sys		/sys		none    rw,bind        0       0
+tmpfs		/tmp		tmpfs   defaults,noatime,mode=1777,size=100m 0 0
+tmpfs		/var/tmp	tmpfs   defaults,noatime,mode=1777,size=100m 0 0

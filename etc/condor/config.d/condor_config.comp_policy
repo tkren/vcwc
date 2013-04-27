@@ -1,0 +1,260 @@
+# Computation Policy for HTCondor
+#
+# Copyright 2013 Thomas Krennwallner <tkren@kr.tuwien.ac.at>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Based on:
+# https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=WholeMachineSlots
+# https://lists.cs.wisc.edu/archive/htcondor-users/2007-June/msg00295.shtml
+#
+
+# Macros specifying the slot id range of the slots for sequential,
+# parallel, and dynamic jobs.  The macros depend on the NUMA layout;
+# the last slot is always the dynamic slot.
+
+SEQCOMP_SLOT_BEGIN = 1
+SEQCOMP_SLOT_END = $(NUM_CPUNODES)
+PARCOMP_SLOT_BEGIN = ($(NUM_CPUNODES)+1)
+PARCOMP_SLOT_END = (2*$(NUM_CPUNODES))
+DYNAMIC_SLOT = (2*$(NUM_CPUNODES)+1)
+DYNAMIC_SLOT_BEGIN = 1
+DYNAMIC_SLOT_END = $(DETECTED_CORES)
+
+# ClassAd attribute that is True/False depending on whether the slot
+# is one of the SEQCOMP, PARCOMP, or DYNAMIC slots
+
+DYNAMIC_PARTITION_SLOT = ( substr(SlotID,0,2) == strcat($(DYNAMIC_SLOT),"_") && \
+                           int(substr(string(SlotID),2)) >= $(DYNAMIC_SLOT_BEGIN) && \
+                           int(substr(SlotID,2)) <= $(DYNAMIC_SLOT_END) ) )
+
+
+IS_SEQCOMP_MACHINE = ( SlotID >= ($(SEQCOMP_SLOT_BEGIN)) && SlotID <= ($(SEQCOMP_SLOT_END)) )
+IS_PARCOMP_MACHINE = ( SlotID >= ($(PARCOMP_SLOT_BEGIN)) && SlotID <= ($(PARCOMP_SLOT_END)) )
+IS_DYNAMIC_MACHINE = ( SlotID == $(DYNAMIC_SLOT) )
+
+STARTD_ATTRS = $(STARTD_ATTRS) IS_SEQCOMP_MACHINE IS_PARCOMP_MACHINE IS_DYNAMIC_MACHINE
+
+# advertise State and JobStart of each slot as SlotX_{State,JobStart}
+# (resp. SlotX_Y_{State,JobStart} for running dynamic slots) in
+# ClassAds of all other slots
+
+STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS), State, JobStart, Activity, EnteredCurrentActivity
+
+
+# Macros for referencing state of the dynamic slot and the state of
+# the SEQCOMP/PARCOMP variant of the current slot 
+
+DYNAMIC_MACHINE_SLOT_STATE = eval(strcat("Slot",$(DYNAMIC_SLOT),"_State"))
+SEQCOMP_MACHINE_SLOT_STATE = eval(strcat("Slot",( ( (SlotID - 1) % $(NUM_CPUNODES) ) + 1),"_State"))
+PARCOMP_MACHINE_SLOT_STATE = eval(strcat("Slot",( ( (SlotID - 1) % $(NUM_CPUNODES) ) + $(NUM_CPUNODES) + 1),"_State"))
+
+# Macro that is true if any partition of the DYNAMIC slot is claimed
+DYNAMIC_SLOTS_CLAIMED = ( \
+  (Slot9_1_State =?= "Claimed") || \
+  (Slot9_2_State =?= "Claimed") || \
+  (Slot9_3_State =?= "Claimed") || \
+  (Slot9_4_State =?= "Claimed") || \
+  (Slot9_5_State =?= "Claimed") || \
+  (Slot9_6_State =?= "Claimed") || \
+  (Slot9_7_State =?= "Claimed") || \
+  (Slot9_8_State =?= "Claimed") || \
+  (Slot9_9_State =?= "Claimed") || \
+  (Slot9_10_State =?= "Claimed") || \
+  (Slot9_11_State =?= "Claimed") || \
+  (Slot9_12_State =?= "Claimed") || \
+  (Slot9_13_State =?= "Claimed") || \
+  (Slot9_14_State =?= "Claimed") || \
+  (Slot9_15_State =?= "Claimed") || \
+  (Slot9_16_State =?= "Claimed") || \
+  (Slot9_17_State =?= "Claimed") || \
+  (Slot9_18_State =?= "Claimed") || \
+  (Slot9_19_State =?= "Claimed") || \
+  (Slot9_20_State =?= "Claimed") || \
+  (Slot9_21_State =?= "Claimed") || \
+  (Slot9_22_State =?= "Claimed") || \
+  (Slot9_23_State =?= "Claimed") || \
+  (Slot9_24_State =?= "Claimed") )
+
+# Macro that is true if any partition of the DYNAMIC slot has been
+# active for longer than MaxClaimTime
+DYNAMIC_SLOTS_MAXCLAIMED = ( \
+  ((CurrentTime - Slot9_1_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_2_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_3_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_4_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_5_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_6_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_7_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_8_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_9_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_10_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_11_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_12_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_13_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_14_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_15_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_16_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_17_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_18_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_19_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_20_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_21_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_22_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_23_JobStart) > $(MaxClaimTime)) || \
+  ((CurrentTime - Slot9_24_JobStart) > $(MaxClaimTime)) )
+
+# Macro that is true if any SEQCOMP or PARCOMP slots are claimed
+COMP_SLOTS_CLAIMED = ( \
+  (Slot1_State =?= "Claimed") || \
+  (Slot2_State =?= "Claimed") || \
+  (Slot3_State =?= "Claimed") || \
+  (Slot4_State =?= "Claimed") || \
+  (Slot5_State =?= "Claimed") || \
+  (Slot6_State =?= "Claimed") || \
+  (Slot7_State =?= "Claimed") || \
+  (Slot8_State =?= "Claimed") )
+
+# dynamic slots are suspendable: if there are dynamic slots claimed
+# then some of their job runtime must be > MaxClaimTime
+DYNAMIC_SLOTS_SUSPENDABLE = ( $(DYNAMIC_SLOTS_CLAIMED) =!= True || \
+                              $(DYNAMIC_SLOTS_MAXCLAIMED) =?= True ) 
+
+
+# sequential computation jobs must run on one of the sequential
+# computation slots, but only if the associated parallel slot is not
+# in use, and the dynamic slots must be suspendable
+START_SEQCOMP_JOB = ( \
+  TARGET.RequiresSeqcompMachine =?= True && \
+  MY.IS_SEQCOMP_MACHINE =?= True && \
+  $(PARCOMP_MACHINE_SLOT_STATE) =!= "Claimed" && \
+  $(DYNAMIC_SLOTS_SUSPENDABLE) =?= True )
+
+# parallel computation jobs must run on one of the parallel
+# computation slots, but only if the associated sequential slot is not
+# in use, and the dynamic slots must be suspendable
+START_PARCOMP_JOB = ( \
+  TARGET.RequiresParcompMachine =?= True && \
+  MY.IS_PARCOMP_MACHINE =?= True && \
+  $(SEQCOMP_MACHINE_SLOT_STATE) =!= "Claimed" && \
+  $(DYNAMIC_SLOTS_SUSPENDABLE) =?= True )
+
+# dynamic jobs must run on the dynamic slot, but only if none of the
+# SEQCOMP and PARCOMP slots are claimed
+START_DYNAMIC_JOB = ( \
+  TARGET.RequiresSeqcompMachine =!= True && \
+  TARGET.RequiresParcompMachine =!= True && \
+  MY.IS_DYNAMIC_MACHINE =?= True && \
+  $(COMP_SLOTS_CLAIMED) =!= True )
+
+# start either a SEQCOMP, a PARCOMP, or a DYNAMIC job
+START = ($(START)) && ( ($(START_SEQCOMP_JOB)) || \
+                        ($(START_PARCOMP_JOB)) || \
+                        ($(START_DYNAMIC_JOB)) )
+
+
+# the rank for starting new jobs:
+# - prefer PARCOMP and SEQCOMP over DYNAMIC jobs
+# - prefer fresh jobs over longrunning jobs
+RANK = ( ( 1 + (TARGET.RequiresParcompMachine =?= True) + (TARGET.RequiresSeqcompMachine =?= True) ) / ( 1 + ifThenElse(MY.JobStart =!= UNDEFINED, (time() - MY.JobStart), 1) ) )
+
+
+#
+#MAXJOBRETIREMENTTIME = 0
+
+# after 20 minutes, schedd must renegotiate to run
+# additional jobs on the machine
+#CLAIM_WORKLIFE = 1200
+
+
+# We give all kind of jobs the change to run 1200secs without
+# interruption.  After that period, jobs with lower priority claiming
+# resources are free to kill.  This way we prevent benchmark jobs with
+# a timeout setting < 1200secs from getting suspended or preempted,
+# and long-running computation jobs have at least some time to finish
+# something.
+MaxClaimTime = 20 * $(MINUTE)
+
+# Suspend jobs if:
+# 1) immediately: they are DYNAMIC jobs and the COMP slots are claimed, OR
+# 2) after MaxClaimTime: they are DYNAMIC jobs
+SUSPEND = ( MY.IS_DYNAMIC_MACHINE && $(COMP_SLOTS_CLAIMED) ) || \
+          ( MY.IS_DYNAMIC_MACHINE && \
+            ( CpuBusyTime > $(MaxClaimTime) ) && \
+            $(ActivationTimer) > $(MaxClaimTime) )
+
+WANT_SUSPEND = ($(WANT_SUSPEND)) || ($(SUSPEND))
+
+
+# Continue jobs if:
+# 1) the COMP slots are not claimed, AND 
+# 2) the cpu is idle, AND 
+# 3) we've been suspended more than 10 seconds
+CONTINUE = $(COMP_SLOTS_CLAIMED) =!= True && $(CPUIdle) && $(ActivityTimer) > 10
+
+
+# The negotiator will not preempt a job running on a given machine
+# unless the PREEMPTION_REQUIREMENTS expression evaluates to true and
+# the owner of the idle job has a better priority than the owner of
+# the running job.
+PREEMPTION_REQUIREMENTS = ( ( (time() - EnteredCurrentState) > $(MaxClaimTime) ) && \
+                            ( RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2 ) ) || \
+                          ( MY.NiceUser == True )
+PREEMPTION_REQUIREMENTS_STABLE = False
+
+# The PREEMPTION_RANK expression is used in a case where preemption is
+# the only option and all other negotiation ranks are equal.  For
+# example, if the job has no preference, it is usually preferable to
+# preempt a job with a small ImageSize instead of a job with a large
+# ImageSize.  The default is to rank all preemptable matches the same.
+# However, the negotiator will always prefer to match the job with an
+# idle machine over a preemptable machine, if all other negotiation
+# ranks are equal.
+#
+# prefer to preempt short-running jobs over long-running jobs
+PREEMPTION_RANK = (RemoteUserPrio * 10000) - (time() - EnteredCurrentState) 
+PREEMPTION_RANK_STABLE = False
+
+
+# We give suspended jobs the change to occupy memory for 1200secs
+# without being evicted.  After that period, suspended jobs will be
+# killed and the job will return to idle state; the whole negotiation
+# process will start from scratch.  This way we prevent long-running
+# computation jobs from being memory hogs.
+MaxSuspendTime = 20 * $(MINUTE)
+
+# Preempt jobs if:
+# 1) The job is suspended and has been suspended longer than we want
+# 2) OR, we don't want to suspend this job, but the conditions to
+#    suspend jobs have been met (someone is using the machine)
+PREEMPT = ( ((Activity == "Suspended") && \
+  ($(ActivityTimer) > $(MaxSuspendTime))) || \
+  (SUSPEND && (WANT_SUSPEND == False)) )
+
+WANT_VACATE = ( $(ActivationTimer) > $(MaxSuspendTime) )
+
+
+
+# How long to allow a job to vacate gracefully.  After this time,
+# the job is killed.
+MaxVacateTime = 20
+
+# Kill jobs if they have taken too long to vacate gracefully
+KILL = $(ActivityTimer) > $(MaxVacateTime) 
+
+
+# how do we defrag partionionable slots, turned off for now 
+#DEFRAG_INTERVAL = 3600
+#DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0
+#DEFRAG_MAX_WHOLE_MACHINES = 2
+#DEFRAG_MAX_CONCURRENT_DRAINING = 2

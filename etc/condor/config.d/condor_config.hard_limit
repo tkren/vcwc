@@ -1,0 +1,7 @@
+## TK
+## How to place a hard limit on memory usage by a job in unix
+## 
+## Condor doesn't currently provide a configuration setting for this, but you
+## can write your own wrapper script that runs before the job and sets resource
+## limits that are enforced by the operating system.
+USER_JOB_WRAPPER = /etc/condor/condor_limits_wrapper.sh

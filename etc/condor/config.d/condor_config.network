@@ -1,0 +1,32 @@
+## Added by matthias 
+## According to configure script
+NETWORK_INTERFACE = 10.0.0.120
+
+##  What machine is your central manager?
+
+#CONDOR_HOST = lion.kr.tuwien.ac.at
+CONDOR_HOST = node2.kr.tuwien.ac.at
+
+##  Mail parameters:
+##  When something goes wrong with condor at your site, who should get
+##  the email?
+
+CONDOR_ADMIN = tkren@kr.tuwien.ac.at
+
+##  Network domain parameters:
+##  Internet domain of machines sharing a common UID space.  If your
+##  machines don't share a common UID space, set it to 
+##  UID_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own UID space.
+
+UID_DOMAIN = kr.tuwien.ac.at
+
+##  Internet domain of machines sharing a common file system.
+##  If your machines don't use a network file system, set it to
+##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own file system. 
+
+FILESYSTEM_DOMAIN = kr.tuwien.ac.at
+
+# Fixes a bug present in 7.8.4, see https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=3260
+MUST_MODIFY_REQUEST_EXPRS = True

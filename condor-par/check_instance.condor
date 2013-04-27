@@ -1,0 +1,43 @@
+# benchmark execution wrapper
+
+basedir = $ENV(HOME)
+runas = aspck
+
+executable = /usr/bin/sudo
+universe   = vanilla
+
+# working dir will be set by condor_dagman
+#initialdir = /path/to/run/logs
+
+#input     = test.data # hm, stdin...
+
+# output and error is hopefully empty
+output     = check_$(cluster)_$(process).out
+error      = check_$(cluster)_$(process).err
+
+# condor log will be set by condor_dagman
+#log =
+
+notification = Error
+notify_user = tkren@kr.tuwien.ac.at
+
+requirements = machine == "lion.kr.tuwien.ac.at"
+
+request_cpus = 1
+request_memory = 6144
+
+#environment = 
+
+# arguments will be set by condor_dagman
+#
+# DAG spliced nodes have the form JOB+NODE.  In our setting we set JOB
+# to R/tTT/bBB/sSS/iIIII/rRR/NNN from which we can extract the information
+# for building the arguments for our executable.
+#
+# 0 2   6   10  14    20   25  29
+# R/t01/b01/s01/i0001/r000/000+CHECK
+#
+arguments  = "-u $(runas) /home/$(runas)/bin/run.sh $(basedir)/$$([substr(""$(jobname)"",2,-10)])/run.profile"
+
+# number of runs
+queue 1
