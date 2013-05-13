@@ -18,33 +18,43 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-########################################################################
-# 								       #
-# run.sh PROFILE						       #
-# 								       #
-# run.sh takes one argument: the path to PROFILE. This file will be    #
-# sourced by run.sh and should contain the following shell variables:  #
-# 								       #
-#  SOLVER: solver id for schroot				       #
-#  RUNCMD: absolute path to run call                                   #
-#  ARGS: solver arguments					       #
-#  INSTANCE: string with instance file(s)			       #
-#  LOG: absolute path to log file				       #
-#  USESTDIN: set to nonempty string for cat'ing INSTANCE to SOLVER     #
-# 								       #
-#  MAILTO: email address for log file (default: $(whoami))	       #
-#  MAXSIZE: max size of email in bytes (default: 20MiB)		       #
-# 								       #
-#  TIMEOUT: cpu timeout per process in secs (default: 10mins)	       #
-#  WALLCLOCKTIMEOUT: wallclock timeout in secs (default: 0)	       #
-#  MEMOUT: memout in kiB (default: 1GiB)			       #
-#  MAXFILESIZE: max file size in kiB (default: 10MiB)		       #
-# 								       #
-# Requires /usr/bin/mutt, /usr/bin/schroot, /usr/bin/time (GNU time),  #
-# /usr/bin/timeout (GNU coreutils), ts (moreutils), procinfo, sysstat, #
-# and lockfile-progs.						       #
-# 								       #
-########################################################################
+#
+# Usage: run.sh PROFILE OUTPUTDIR
+#
+# run.sh takes two arguments:
+#
+#  $1: the path to PROFILE. This file will be sourced by run.sh and
+#  should contain the following shell variables:
+#
+#   SOLVER: solver ID for schroot call
+#   RUNCMD: absolute path to run call
+#   ARGS: solver arguments
+#   INSTANCE: string with instance file(s)
+#   LOG: prefix name for all log files
+#   USESTDIN: set to nonempty string for cat'ing INSTANCE to SOLVER
+#
+#   MAILTO: email address for log file (default: $(whoami))
+#   MAXSIZE: max size of email in bytes (default: 20MiB)
+#
+#   TIMEOUT: cpu timeout per process in secs (default: 10mins)
+#   WALLCLOCKTIMEOUT: wallclock timeout in secs (default: 0)
+#   MEMOUT: memout in kiB (default: 1GiB)
+#   MAXFILESIZE: max file size in kiB (default: 10MiB)
+#
+#  $2: the path to the output directory OUTPUTDIR, where all logfiles
+#  will be stored (date0 is the startup date of run.sh):
+#
+#   $2/${LOG}_${date0}_stdout
+#   $2/${LOG}_${date0}_stderr
+#   $2/${LOG}_${date0}_stdout_ts
+#   $2/${LOG}_${date0}_stderr_ts
+#   $2/${LOG}_${date0}_run
+#
+#
+# Requires /usr/bin/mutt, /usr/bin/schroot, /usr/bin/time (GNU time),
+# /usr/bin/timeout (GNU coreutils), ts (moreutils), procinfo, sysstat,
+# and lockfile-progs.
+#
 
 set -p # privileged mode
 
@@ -76,7 +86,7 @@ MAXFILESIZE=10240
 #
 
 mutt=/usr/bin/mutt
-schroot="/usr/bin/schroot -d/"
+schroot="/usr/bin/schroot -d/tmp"
 gnutime="/usr/bin/time --verbose"
 wallclocklimit="/usr/bin/timeout --preserve-status"
 
@@ -96,15 +106,15 @@ function logerr() {
 
 #
 
+if [ $# != 2 ]; then
+    logerr "Wrong arguments."
+    logerr "Usage: $0 PROFILE-FILE OUTPUT-DIR"
+    exit 1
+fi
+
 #######################
 # read config profile #
 #######################
-
-if [ $# != 1 ]; then
-    logerr "Profile argument missing."
-    logerr "Usage: $0 PROFILE-FILE"
-    exit 1
-fi
 
 config="$1"
 
@@ -120,6 +130,15 @@ else
     exit 1
 fi
 
+# FIXME: use condor ID here?
+logbase="$2"
+
+# check output directory
+if [ ! -w $logbase ] || [ ! -d $logbase ]; then
+    logerr "Output directory \`\`$logbase'' is not writable."
+    exit 1
+fi
+
 #
 
 #########################
@@ -130,11 +149,13 @@ fi
 # we expect a recent /usr/bin/timeout, see http://debbugs.gnu.org/cgi/bugreport.cgi?bug=6308
 
 if [ $WALLCLOCKTIMEOUT != 0 ]; then
-    run="$gnutime $schroot -c $SOLVER -- $wallclocklimit -sXCPU -k10 $WALLCLOCKTIMEOUT $RUNCMD $ARGS"
+    maxtimeout=$WALLCLOCKTIMEOUT
 else
-    # we give enough time for reaching $TIMEOUT cpu time
-    run="$gnutime $schroot -c $SOLVER -- $wallclocklimit -sXCPU -k10 $((2 * $TIMEOUT)) $RUNCMD $ARGS"
+    # this should give enough time for reaching $TIMEOUT cpu time
+    maxtimeout=$((12 * $TIMEOUT / 10))
 fi
+
+run="$gnutime $schroot -c $SOLVER -- $wallclocklimit -sXCPU -k10 $maxtimeout $RUNCMD $ARGS"
 
 #
 
@@ -204,18 +225,6 @@ function cleanup_and_runlogs() {
 trap cleanup_and_runlogs INT EXIT
 
 #
-
-#logdir=$(dirname $LOG)
-#logfile=$(basename $LOG)
-
-# FIXME: use condor ID here?
-logbase=.  # $(mktemp -d --tmpdir=$logdir ${logfile}.XXXXXXXXXX) # this must be unique
-#if [ $? != 0 ]; then
-#    logerr "Error: mktemp failed"
-#    exit 1
-#fi
-
-
 
 logout=$logbase/${LOG}_${date0}_stdout
 logerr=$logbase/${LOG}_${date0}_stderr
