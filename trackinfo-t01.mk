@@ -23,6 +23,7 @@
 
 # trackname
 TRACK=t01
+SYSTEMTRACK=
 
 # input
 TRACK_DIR=/home/aspcomp

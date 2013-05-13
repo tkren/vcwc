@@ -126,7 +126,16 @@ $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE): $(RUNPROFILE_MACRO)
 	$$(eval ARGV2=$$(basename $$(word 4,$$(SPLIT))))
 	$$(eval ARGV3=$$(shell cat $(OUTPUTPRED_DIR)/$$(subst b,,$(1))-*.txt))
 	$$(eval BASE=$$(dir $$@))
+	$$(eval BASENAME=$$(shell basename $$(BASE)))
+ifdef SYSTEMTRACK
+	$$(eval RUNCMD=/usr/local/bin/run)
+	$$(eval ENC=$(PARTICIPANTS_DIR)/$(1)/$(2)/encoding.asp)
+else
+	$$(eval RUNCMD=/usr/local/$$(shell basename $(OUTPUTPRED_DIR)/$$(subst b,,$(1))-*.txt .txt)/bin/run)
+	$$(eval ENC="")
+endif
 	@mkdir -p $$(BASE) ; \
+	ln -s $$(BASENAME) $$(BASE)/../i$$(word 1,$$(SPLIT)) ; \
 	$(M4) vcwc-helpers.m4 \
 		-DTOOL=$(TOOL) \
 		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
@@ -134,6 +143,8 @@ $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE): $(RUNPROFILE_MACRO)
 		-DTRACK=$(TRACK) -DBENCH=$(1) -DPART=$(2) \
 		-DTRACK_DIR="$(TRACK_DIR)/profiles" \
 		-DBENCHMARKS_DIR="$(BENCHMARKS_DIR)" \
+		-D__RUNCMD__="$$(RUNCMD)" \
+		-D__ENCODING__="$$(ENC)" \
 		-D__INSTANCE__="$$(INST)" \
 		-D__ARGV1__=$$(ARGV1) \
 		-D__ARGV2__=$$(ARGV2) \
