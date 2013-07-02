@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# run.sh -- runs benchmark suites
+# validate.sh -- validates runs
 #
-# Copyright (C) 2011, 2012, 2013 Thomas Krennwallner <tkren@kr.tuwien.ac.at>
+# Copyright (C) 2013 Thomas Krennwallner <tkren@kr.tuwien.ac.at>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,30 +19,27 @@
 #
 
 #
-# Usage: run.sh PROFILE OUTPUTDIR
+# Usage: validate.sh PROFILE OUTPUTDIR EXITCODE
 #
-# run.sh takes two arguments:
+# validate.sh takes three arguments:
 #
-#  $1: the path to PROFILE. This file will be sourced by run.sh and
-#  should contain the following shell variables:
+#  $1: the path to PROFILE. This file will be sourced by validate.sh
+#  and should contain the following shell variables:
 #
-#   SOLVER: solver ID for schroot call
+#   SOLVER: solver id
 #   RUNCMD: absolute path to run call
-#   ARGS: solver arguments
 #   INSTANCE: string with instance file(s)
 #   LOG: prefix name for all log files
-#   USESTDIN: set to nonempty string for cat'ing INSTANCE to SOLVER
 #
 #   MAILTO: email address for log file (default: $(whoami))
 #   MAXSIZE: max size of email in bytes (default: 20MiB)
 #
-#   TIMEOUT: cpu timeout per process in secs (default: 10mins)
-#   WALLCLOCKTIMEOUT: wallclock timeout in secs (default: 0)
+#   TIMEOUT: cpu timeout per process in secs (default: 800s)
 #   MEMOUT: memout in kiB (default: 1GiB)
 #   MAXFILESIZE: max file size in kiB (default: 10MiB)
 #
 #  $2: the path to the output directory OUTPUTDIR, where all logfiles
-#  will be stored (date0 is the startup date of run.sh):
+#  will be stored (date0 is the startup date of validate.sh):
 #
 #   $2/${LOG}_${date0}_stdout
 #   $2/${LOG}_${date0}_stderr
@@ -50,10 +47,13 @@
 #   $2/${LOG}_${date0}_stderr_ts
 #   $2/${LOG}_${date0}_run
 #
+#  $3: the exit code that should be checked
 #
-# Requires /usr/bin/mutt, /usr/bin/schroot, /usr/bin/time (GNU time),
-# /usr/bin/timeout (GNU coreutils), ts (moreutils), procinfo, sysstat,
-# and lockfile-progs.
+#  $4: costs (optional)
+#
+# Requires /usr/bin/mutt, /usr/bin/time (GNU time), /usr/bin/timeout
+# (GNU coreutils), ts (moreutils), procinfo, sysstat, and
+# lockfile-progs.
 #
 
 set -p # privileged mode
@@ -78,17 +78,15 @@ MAILTO=$(whoami)
 MAXSIZE=20971520
 
 RUNCMD=/usr/local/bin/run
-TIMEOUT=600
-WALLCLOCKTIMEOUT=0
+TIMEOUT=800
 MEMOUT=6291456
 MAXFILESIZE=10240
 
 #
 
 mutt=/usr/bin/mutt
-schroot="/usr/bin/schroot -d/tmp"
 gnutime="/usr/bin/time --verbose"
-wallclocklimit="/usr/bin/timeout --preserve-status"
+wallclocklimit="/usr/bin/timeout"
 
 # set to false after stream redirection
 startup=1
@@ -101,14 +99,14 @@ date0=$(date $dateformat)
 #
 
 function logerr() {
-    echo "run.sh: $*" 1>&2
+    echo "validate.sh: $*" 1>&2
 }
 
 #
 
-if [ $# != 2 ]; then
+if [ $# != 3 ]; then
     logerr "Wrong arguments."
-    logerr "Usage: $0 PROFILE-FILE OUTPUT-DIR"
+    logerr "Usage: $0 PROFILE-FILE OUTPUT-DIR EXITCODE"
     exit 1
 fi
 
@@ -139,23 +137,24 @@ if [ ! -w $logbase ] || [ ! -d $logbase ]; then
     exit 1
 fi
 
+check_exitcode="$3"
+
+if [ ! $(expr $check_exitcode + 1 2>/dev/null) ]; then
+    logerr "EXITCODE \`\`$check_exitcode'' is not an integer."
+fi
+
+
+
 #
 
 #########################
 # setup run and schroot #
 #########################
 
-# setup run, possibly with wall clock timeout
+# setup run with wall clock timeout
 # we expect a recent /usr/bin/timeout, see http://debbugs.gnu.org/cgi/bugreport.cgi?bug=6308
 
-if [ $WALLCLOCKTIMEOUT != 0 ]; then
-    maxtimeout=$WALLCLOCKTIMEOUT
-else
-    # this should give enough time for reaching $TIMEOUT cpu time
-    maxtimeout=$((12 * $TIMEOUT / 10))
-fi
-
-run="$gnutime $schroot -c $SOLVER -- $wallclocklimit -sXCPU -k10 $maxtimeout $RUNCMD $ARGS"
+run="$gnutime $wallclocklimit -k10 $TIMEOUT $RUNCMD $ARGS"
 
 #
 
@@ -195,7 +194,7 @@ function cleanup_and_runlogs() {
         # here, bastard mutt sometimes sets logerrts.xz to text/plain
         # instead of application/octet-stream
 	printf "${HEADER}\nFinish: $date1\n" | \
-	    $mutt -e "set copy=no" -s "[RUN] $retval $SOLVER $ARGS $INSTANCE $logbase" \
+	    $mutt -e "set copy=no" -s "[VALIDATE] $retval $SOLVER $ARGS $INSTANCE $logbase" \
 	    -a $config $logrun.xz $logout.xz $logerr.xz $logoutts.xz $logerrts.xz \
 	    -- $MAILTO
 
@@ -355,15 +354,19 @@ exec 8>&2
 exec 2> $logerrts
 
 pidfifo=$logbase/pid
-mkfifo $pidfifo
+inputfifo=$logbase/input
+mkfifo $pidfifo $inputfifo
 
 # open fd to pidfifo, will be inherited by sub-shells
 exec 5<> $pidfifo
 
+# open fd to inputfifo, will be inherited by sub-shells
+exec 6<> $inputfifo
+
 #
 
 ########################################################################
-# now run the solver in its own session				       #
+# now run the checker in its own session			       #
 # 								       #
 # the assumption is here that ulimit/timeout will kill the process     #
 # eventually and the root command is time, which will be the session   #
@@ -387,23 +390,23 @@ exec 5<> $pidfifo
 
             # setup file size limit, process receives SIGXFSZ upon too
             # large files
-	    if [ $MAXFILESIZE != 0 ]; then
-		ulimit -S -f $MAXFILESIZE
-		if [ $? != 0 ]; then
-		    logerr "ulimit -S -f $MAXFILESIZE failed"
-		    exit 128
-		fi
-	    fi
+#	    if [ $MAXFILESIZE != 0 ]; then
+#		ulimit -S -f $MAXFILESIZE
+#		if [ $? != 0 ]; then
+#		    logerr "ulimit -S -f $MAXFILESIZE failed"
+#		    exit 128
+#		fi
+#	    fi
 
             # setup memory limit, process receives SIGSEGV upon too
             # much memory consumption
-	    if [ $MEMOUT != 0 ]; then
-		ulimit -S -v $MEMOUT
-		if [ $? != 0 ]; then
-		    logerr "ulimit -S -v $MEMOUT failed"
-		    exit 128
-		fi
-	    fi
+#	    if [ $MEMOUT != 0 ]; then
+#		ulimit -S -v $MEMOUT
+#		if [ $? != 0 ]; then
+#		    logerr "ulimit -S -v $MEMOUT failed"
+#		    exit 128
+#		fi
+#	    fi
 
             # setup timeout with 10 sec additional time before we
             # slaughter the process really hard with SIGTERM
@@ -426,12 +429,9 @@ exec 5<> $pidfifo
 
 	    fi
 
-            # run RUN with empty environment vars in a new session	    
-	    if [ -z "$USESTDIN" ]; then
-		setsid env -i $run $INSTANCE 3>&- 4>&- &
-	    else
-		setsid env -i $run < <(exec cat $INSTANCE) 3>&- 4>&- &
-	    fi
+            # run RUN with empty environment vars in a new session,
+            # get stdin from mothership via inputfifo
+	    setsid env -i $run $check_exitcode $INSTANCE <&6 3>&- 4>&- &
 	    
             # get process id of RUN
 	    runpid=$!
@@ -460,12 +460,16 @@ lastpid=$!
 read runpid runsid <&5
 exec 5>&-
 
+# now send my stdin to $inputfifo
+cat >&6
+exec 6>&-
+
 # wait until RUN and pipe processes quit
 wait $lastpid
 retval=$? # get exit status of RUN
 
-# remove pipe
-rm -f $pidfifo
+# remove pipes
+rm -f $pidfifo $inputfifo
 
 # close stdout of RUN
 exec 1>&7 7>&-

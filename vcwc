@@ -31,7 +31,7 @@ then
     exit 1
 elif [ $# -gt 1 ]
 then
-    target=$2
+    target="$*"
 else
     target=all
 fi

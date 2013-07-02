@@ -12,7 +12,7 @@ track=$5
 patches=/home/aspcomp/aspcomp2013-svn/participants
 
 loop=$(mktemp -d)
-trap "umount -d /dev/loop0; rmdir $loop" EXIT
+trap "umount -d /dev/loop0; e2fsck -p $image; rmdir $loop" EXIT
 trap "rm $image" ERR
 
 ( losetup -d /dev/loop0 2>/dev/null || exit 0 )
@@ -57,6 +57,8 @@ fi
 # track)
 for b in $BMDIRS
 do
-    mkdir -pv $track/$b/s$id
-    ln -sv $image $track/$b/s$id/$(basename $image)
+    solverdir=$track/$b/s$id
+    baseimage=$(basename $image)
+    test -d $solverdir || mkdir -pv $solverdir
+    test -L $solverdir/$baseimage || ln -sv $image $solverdir/$baseimage
 done

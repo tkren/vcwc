@@ -5,7 +5,7 @@ tracks="t01-Model+Solve.txt t02-Sequential_Systems.txt t03-Parallel_Systems.txt"
 participants=/home/aspcomp/participants
 images=$participants/images
 submissions=/home/aspcomp/submissions
-create_participant_image=/home/aspcomp/aspcomp2013-svn/aspexec/create_participant_image.sh
+create_participant_image=/home/aspcomp/aspcomp2013-svn/aspexec/lib/create_participant_image.sh
 
 for t in $tracks; do
 

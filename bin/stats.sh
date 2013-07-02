@@ -3,7 +3,7 @@
 # argument $1 is the path to the directory containing the instances
 path=$1
 
-rotate_conf=$path/aspexec_rotate.conf
+rotate_conf=~/bin/aspexec_rotate.conf
 
 exclude_file=BROKEN
 stat_file=stat
@@ -28,12 +28,33 @@ output <- c(t[1,1],t[1,2],t[1,3],t[1,4],t[1,5],t[1,6],t[1,7]);
 solverOutputs <- t[c(9)][,1];
 checkerOutputs <- t[c(10)][,1];
 solverOk <- ! ( ( (10 %in% solverOutputs) || (11 %in% solverOutputs) || (30 %in% solverOutputs) ) && (20 %in% solverOutputs) );
-checkerOk <- length(unique(checkerOutputs)) == 1;
-if (solverOk && checkerOk){
+
+# aggregate checker output
+aggCheckerOutput <- 3
+if (0 %in% checkerOutputs && !(1 %in% checkerOutputs) && !(2 %in% checkerOutputs)){
+	aggCheckerOutput <- 0
+}
+if (1 %in% checkerOutputs){
+	aggCheckerOutput <- 1
+}
+if (0 %in% checkerOutputs && 2 %in% checkerOutputs){
+	aggCheckerOutput <- 1
+}
+if (2 %in% checkerOutputs && 124 %in% checkerOutputs){
+	aggCheckerOutput <- 1
+}
+if (!(0 %in% checkerOutputs) && !(1 %in% checkerOutputs) && !(2 %in% checkerOutputs) && 124 %in% checkerOutputs){
+	aggCheckerOutput <- 124
+}
+if (!(0 %in% checkerOutputs) && !(1 %in% checkerOutputs) && !(124 %in% checkerOutputs) && 2 %in% checkerOutputs){
+	aggCheckerOutput <- NA
+}
+
+if (solverOk){
   # if yes: output 0 (discrepancy flag) and original solver and checker output
 	output <- append(output, 0);
 	output <- append(output, (unique(solverOutputs))[1]);
-	output <- append(output, (unique(checkerOutputs))[1]);
+	output <- append(output, aggCheckerOutput);
 }else{
   # if no: output 1 (discrepancy flag), followed by 1, 1
 	output <- append(output, 1)
@@ -50,10 +71,10 @@ output <- append(output, maxCosts[1:2])
 # 5. output column 13 (it is the same for all runs)
 output <- append(output, c(t[1,13]));
 
-# 6. compute means of columns 14,15,16,17,18
-means <- sapply(t[c(14,15,16,17,18)],mean,na.rm=TRUE);
-output <- append(output, means[1:5])
-write(output,stdout(),20);"
+# 6. compute means of columns 14,15,16,17,18,19,20
+means <- sapply(t[c(14,15,16,17,18,19,20)],mean,na.rm=TRUE);
+output <- append(output, means[1:7])
+write(output,stdout(),22);"
 
 summary_statistics="
 t <- read.table('stdin',header=FALSE,as.is=TRUE);
@@ -65,6 +86,9 @@ t <- within(t, timegrounder <- replace(timegrounder, timegrounder > 600, NaN));
 t <- within(t, memorygrounder <- replace(memorygrounder, memorygrounder > 6*2^30, NaN));
 t <- within(t, timesolver <- replace(timesolver, timesolver > 600, NaN));
 t <- within(t, memorysolver <- replace(memorysolver, memorysolver > 6*2^30, NaN));
+
+# remove NA columns
+t <- t[,colSums(is.na(t))<nrow(t)]
 t <- na.omit(t);
 
 pdf(file='$path/$boxplot_file');
@@ -87,9 +111,12 @@ print(xtable(summary), file='$path/$textable_file');
 "
 
 # rotate the statistics and plots
-logrotate -s /dev/null $rotate_conf
+(cd $path; /usr/sbin/logrotate -s /dev/null $rotate_conf)
 
 for d in $(find $path -mindepth 1 -maxdepth 1 -type d); do
+
+    # rotate the statistics and plots
+    (cd $d; /usr/sbin/logrotate -s /dev/null $rotate_conf)
 
     # (1) append to instances_file: the last line of instances that
     # have no exclude_file, and the last line of instances with

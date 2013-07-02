@@ -29,6 +29,7 @@ SYSTEMTRACK=
 TRACK_DIR=/home/aspcomp
 PARTICIPANTS_DIR=$(TRACK_DIR)/participants/$(TRACK)
 BENCHMARKS_DIR=$(TRACK_DIR)/benchmarks/$(TRACK)
+CHECKERS_DIR=$(TRACK_DIR)/checkers
 OUTPUTPRED_DIR=$(TRACK_DIR)/output
 
 EXEC_DIR=/home/aspexec

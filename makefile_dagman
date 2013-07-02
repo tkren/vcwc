@@ -68,12 +68,14 @@ STATSRULE_SUBFILE := statsrule.sub
 BMRANKING_SUBFILE := bmranking.sub
 
 RUN_INSTANCE_PROFILE := run.profile
+VALIDATE_INSTANCE_PROFILE := validate.profile
 
 INSTANCE_MACRO := instance.m4
 STATSRULE_MACRO := statsrule.m4
 BMRANKING_MACRO := bmranking.m4
 TRACKEXEC_MACRO := trackexec.m4
 RUNPROFILE_MACRO := runprofile.m4
+VALIDATEPROFILE_MACRO := validateprofile.m4
 
 BMRANKING_SUBFILES := $(BENCHMARKS:%=$(DAGMAN_DIR)/%/$(BMRANKING_SUBFILE))
 
@@ -115,9 +117,31 @@ $(eval PROFILE_BP_DIR := $(PROFILE_DIR)/$(1)/$(2))
 $(eval BM_INST := $(notdir $(filter $(1)/%, $(INSTANCES))))
 $(eval BM_NUMINST := $(notdir $(filter $(1)/%, $(NUM_INSTANCES))))
 $(eval INSTANCE_SUBFILES := $(foreach I,$(BM_NUMINST),$(foreach R,$(RUNS),$(RUN_DIR)/$I/$R/$(INSTANCE_SUBFILE))))
-$(eval INSTANCE_PROFILES := $(foreach I,$(BM_INST),$(PROFILE_BP_DIR)/$I/$(RUN_INSTANCE_PROFILE)))
+$(eval INSTANCE_PROFILES := $(foreach I,$(BM_INST),$(PROFILE_BP_DIR)/$I/$(RUN_INSTANCE_PROFILE) $(PROFILE_BP_DIR)/$I/$(VALIDATE_INSTANCE_PROFILE)))
 
 all: $(RUN_DIR)/$(STATSRULE_SUBFILE) $(INSTANCE_PROFILES)
+
+$(PROFILE_BP_DIR)/%/$(VALIDATE_INSTANCE_PROFILE): $(VALIDATEPROFILE_MACRO)
+	$$(eval INST=$$(patsubst $(PROFILE_BP_DIR)/%/$(VALIDATE_INSTANCE_PROFILE),%,$$@))
+	$$(eval SPLIT=$$(subst -,$(space),$$(INST)))
+	$$(eval ARGV1=$$(word 3,$$(SPLIT)))
+	$$(eval ARGV2=$$(basename $$(word 4,$$(SPLIT))))
+	$$(eval ARGV3=$$(shell cat $(OUTPUTPRED_DIR)/$$(subst b,,$(1))-*.txt))
+	$$(eval BASE=$$(dir $$@))
+	$$(eval BASENAME=$$(shell basename $$(BASE)))
+	$$(eval LINK=$$(BASE)/../i$$(word 1,$$(SPLIT)))
+	$$(eval RUNCMD=$(CHECKERS_DIR)/$(1)/checker.sh)
+	@mkdir -p $$(BASE) ; \
+	test -L $$(LINK) || ln -s $$(BASENAME) $$(LINK) ; \
+	$(M4) vcwc-helpers.m4 \
+		-DTOOL=$(TOOL) \
+		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
+		-DTIMESTAMP="$(TIMESTAMP)" \
+		-DTRACK=$(TRACK) -DBENCH=$(1) -DPART=$(2) \
+		-DTRACK_DIR="$(TRACK_DIR)/profiles" \
+		-DBENCHMARKS_DIR="$(BENCHMARKS_DIR)" \
+		-D__RUNCMD__="$$(RUNCMD)" \
+		-D__INSTANCE__="$$(INST)" $$< > $$@
 
 $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE): $(RUNPROFILE_MACRO)
 	$$(eval INST=$$(patsubst $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE),%,$$@))
@@ -127,6 +151,7 @@ $(PROFILE_BP_DIR)/%/$(RUN_INSTANCE_PROFILE): $(RUNPROFILE_MACRO)
 	$$(eval ARGV3=$$(shell cat $(OUTPUTPRED_DIR)/$$(subst b,,$(1))-*.txt))
 	$$(eval BASE=$$(dir $$@))
 	$$(eval BASENAME=$$(shell basename $$(BASE)))
+	$$(eval LINK=$$(BASE)/../i$$(word 1,$$(SPLIT)))
 ifdef SYSTEMTRACK
 	$$(eval RUNCMD=/usr/local/bin/run)
 	$$(eval ENC=$(PARTICIPANTS_DIR)/$(1)/$(2)/encoding.asp)
@@ -135,7 +160,7 @@ else
 	$$(eval ENC="")
 endif
 	@mkdir -p $$(BASE) ; \
-	ln -s $$(BASENAME) $$(BASE)/../i$$(word 1,$$(SPLIT)) ; \
+	test -L $$(LINK) || ln -s $$(BASENAME) $$(LINK) ; \
 	$(M4) vcwc-helpers.m4 \
 		-DTOOL=$(TOOL) \
 		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
@@ -260,6 +285,23 @@ show:
 
 submit:
 	@cd $(DAGMAN_DIR) ; condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
+
+
+# set BENCHMARK and PARTICIPANT as command line arguments to make:
+# 
+# $ make [...] reexec BENCHMARK=b08 PARTICIPANT=s36
+reexec:
+	$(eval RESCUE_DAG := $(lastword $(sort $(wildcard $(DAGMAN_DIR)/$(TRACKEXEC_DAG).rescue[[:digit:]][[:digit:]][[:digit:]]))))
+	$(eval BMPS := $(filter %/$(PARTICIPANT),$(filter $(BENCHMARK)/%, $(PARTICIPANTS))))
+	$(eval INST := $(notdir $(filter $(BENCHMARK)/%, $(NUM_INSTANCES))))
+	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC)))))
+	@cd $(DAGMAN_DIR) ; \
+	echo -n "$(JOBS)" | awk 'BEGIN{RS=" "} {print}' > $(RESCUE_DAG).rerun ; \
+	sed "s/^#.*//g" $(RESCUE_DAG) | sort > $(RESCUE_DAG).sorted ; \
+	mv $(RESCUE_DAG) $(RESCUE_DAG).save ; \
+	join -1 1 -2 2 -v 2 -o 2.1,2.2 $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted > $(RESCUE_DAG) ; \
+	condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
+
 
 $(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt:
 	touch $(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt
