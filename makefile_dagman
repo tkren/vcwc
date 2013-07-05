@@ -294,11 +294,11 @@ reexec:
 	$(eval RESCUE_DAG := $(lastword $(sort $(wildcard $(DAGMAN_DIR)/$(TRACKEXEC_DAG).rescue[[:digit:]][[:digit:]][[:digit:]]))))
 	$(eval BMPS := $(filter %/$(PARTICIPANT),$(filter $(BENCHMARK)/%, $(PARTICIPANTS))))
 	$(eval INST := $(notdir $(filter $(BENCHMARK)/%, $(NUM_INSTANCES))))
-	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC)))))
+	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+CHECK $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+STATS)) $(TAG_STATS)/$(TRACK)/$(BP)/$(VERSION)) $(TAG_BMRANKING)/$(TRACK)/$(BENCHMARK)/$(VERSION)))
 	@cd $(DAGMAN_DIR) ; \
-	echo -n "$(JOBS)" | awk 'BEGIN{RS=" "} {print}' > $(RESCUE_DAG).rerun ; \
+	echo "$(JOBS)" | tr ' ' '\n' > $(RESCUE_DAG).rerun ; \
 	sed "s/^#.*//g" $(RESCUE_DAG) | sort > $(RESCUE_DAG).sorted ; \
-	mv $(RESCUE_DAG) $(RESCUE_DAG).save ; \
+	mv --backup=t $(RESCUE_DAG) $(RESCUE_DAG).save ; \
 	join -1 1 -2 2 -v 2 -o 2.1,2.2 $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted > $(RESCUE_DAG) ; \
 	condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
 
