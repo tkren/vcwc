@@ -81,6 +81,7 @@ BMRANKING_SUBFILES := $(BENCHMARKS:%=$(DAGMAN_DIR)/%/$(BMRANKING_SUBFILE))
 
 TRACKEXEC_DAG := trackexec.dag
 VERSION_FILE := $(TRACKEXEC_DAG).version
+RESCUE_DAG := $(lastword $(sort $(wildcard $(DAGMAN_DIR)/$(TRACKEXEC_DAG).rescue[[:digit:]][[:digit:]][[:digit:]])))
 
 # the current version of the workflow
 VERSION := $(shell mkdir -p $(DAGMAN_DIR) ; test -f $(DAGMAN_DIR)/$(VERSION_FILE) || echo "000" > $(DAGMAN_DIR)/$(VERSION_FILE) ; cat $(DAGMAN_DIR)/$(VERSION_FILE) )
@@ -287,20 +288,27 @@ submit:
 	@cd $(DAGMAN_DIR) ; condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
 
 
-# set BENCHMARK and PARTICIPANT as command line arguments to make:
-# 
-# $ make [...] reexec BENCHMARK=b08 PARTICIPANT=s36
-reexec:
-	$(eval RESCUE_DAG := $(lastword $(sort $(wildcard $(DAGMAN_DIR)/$(TRACKEXEC_DAG).rescue[[:digit:]][[:digit:]][[:digit:]]))))
+$(RESCUE_DAG).rerun:
 	$(eval BMPS := $(filter %/$(PARTICIPANT),$(filter $(BENCHMARK)/%, $(PARTICIPANTS))))
 	$(eval INST := $(notdir $(filter $(BENCHMARK)/%, $(NUM_INSTANCES))))
 	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+CHECK $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+STATS)) $(TAG_STATS)/$(TRACK)/$(BP)/$(VERSION)) $(TAG_BMRANKING)/$(TRACK)/$(BENCHMARK)/$(VERSION)))
+	@cd $(DAGMAN_DIR) ; echo "$(JOBS)" | tr ' ' '\n' > $@
+
+$(RESCUE_DAG).sorted:
+	@cd $(DAGMAN_DIR) ; sed "s/^#.*//g" $(RESCUE_DAG) | sort > $@
+
+$(RESCUE_DAG): $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted
 	@cd $(DAGMAN_DIR) ; \
-	echo "$(JOBS)" | tr ' ' '\n' > $(RESCUE_DAG).rerun ; \
-	sed "s/^#.*//g" $(RESCUE_DAG) | sort > $(RESCUE_DAG).sorted ; \
-	mv --backup=t $(RESCUE_DAG) $(RESCUE_DAG).save ; \
-	join -1 1 -2 2 -v 2 -o 2.1,2.2 $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted > $(RESCUE_DAG) ; \
-	condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
+	mv --backup=t $@ $@.save ; \
+	join -1 1 -2 2 -v 2 -o 2.1,2.2 $^ > $@ ; \
+
+# set BENCHMARK and PARTICIPANT as command line arguments to make:
+#
+# $ make [...] reexec BENCHMARK=b08 PARTICIPANT=s36
+reexec: $(RESCUE_DAG)
+
+cleanrescue:
+	rm -f $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted
 
 
 $(DAGMAN_DIR)/$(TRACKEXEC_DAG).halt:
