@@ -83,6 +83,10 @@ TRACKEXEC_DAG := trackexec.dag
 VERSION_FILE := $(TRACKEXEC_DAG).version
 RESCUE_DAG := $(lastword $(sort $(wildcard $(DAGMAN_DIR)/$(TRACKEXEC_DAG).rescue[[:digit:]][[:digit:]][[:digit:]])))
 
+ifdef RESCUE_DAG
+$(info - rescue DAG: $(RESCUE_DAG))
+endif
+
 # the current version of the workflow
 VERSION := $(shell mkdir -p $(DAGMAN_DIR) ; test -f $(DAGMAN_DIR)/$(VERSION_FILE) || echo "000" > $(DAGMAN_DIR)/$(VERSION_FILE) ; cat $(DAGMAN_DIR)/$(VERSION_FILE) )
 
