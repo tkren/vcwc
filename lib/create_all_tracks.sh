@@ -1,6 +1,7 @@
 #!/bin/bash
 
 tracksdir=/home/aspcomp/aspcomp2013-svn/tracks
+encodingsdir=/home/aspcomp/aspcomp2013-svn/benchmarks/encodings
 tracks="t01-Model+Solve.txt t02-Sequential_Systems.txt t03-Parallel_Systems.txt"
 participants=/home/aspcomp/participants
 images=$participants/images
@@ -13,7 +14,7 @@ for t in $tracks; do
 
     echo Creating participant images for $track
 
-    for ID in $(cut -f1 $tracksdir/$t); do
+    while read ID foo ENC ; do
 
 	echo Creating participant ${images}/s${ID}.img
 
@@ -30,6 +31,13 @@ for t in $tracks; do
 	    echo $ID is already there. || \
 	    sudo $create_participant_image ${ID} ${sandbox} $submissions/aspcomp2013_submission_${ID}.zip ${images}/s${ID}.img $participants/$track
 
-    done
+	for bm in $encodingsdir/$ENC/[[:digit:]]*/encoding.asp ; do
+
+	    bmid=$(cut -d/ -f8 <<<"$bm" | cut -d- -f1)
+	    sudo ln -sv ${bm} ${participants}/${track}/b${bmid}/s${ID}/encoding.asp
+
+	done
+
+    done < $tracksdir/$t
 
 done
