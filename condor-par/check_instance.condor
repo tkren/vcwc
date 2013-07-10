@@ -49,7 +49,7 @@ environment = TIMEOUT=60 ; MEMOUT=$$([TARGET.Memory * 1024]); MAXFILESIZE=10240
 #
 theinstance=$$([substr(""$(jobname)"",2,-14)])
 therun=$$([substr(""$(jobname)"",2,-9)])
-arguments  = "$(runas) $(basedir)/profiles/$(theinstance)/validate.profile /home/$(runas)/$(therun)"
+arguments  = "$(runas) $(basedir)/profiles/$(theinstance)/validate.profile $(basedir)/$(therun) /home/$(runas)/$(therun)"
 
 # number of runs
 queue 1
