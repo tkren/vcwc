@@ -296,7 +296,7 @@ $(RESCUE_DAG).rerun:
 	$(eval BMPS := $(filter %/$(PARTICIPANT),$(filter $(BENCHMARK)/%, $(PARTICIPANTS))))
 	$(eval INST := $(notdir $(filter $(BENCHMARK)/%, $(NUM_INSTANCES))))
 	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+CHECK $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+STATS)) $(TAG_STATS)/$(TRACK)/$(BP)/$(VERSION)) $(TAG_BMRANKING)/$(TRACK)/$(BENCHMARK)/$(VERSION)))
-	@cd $(DAGMAN_DIR) ; echo "$(JOBS)" | tr ' ' '\n' > $@
+	@cd $(DAGMAN_DIR) ; tr ' ' '\n' <<< "$(JOBS)" > $@
 
 $(RESCUE_DAG).sorted:
 	@cd $(DAGMAN_DIR) ; sed "s/^#.*//g" $(RESCUE_DAG) | sort > $@
