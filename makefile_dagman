@@ -137,7 +137,7 @@ $(PROFILE_BP_DIR)/%/$(VALIDATE_INSTANCE_PROFILE): $(VALIDATEPROFILE_MACRO)
 	$$(eval LINK=$$(BASE)/../i$$(word 1,$$(SPLIT)))
 	$$(eval RUNCMD=$(CHECKERS_DIR)/$(1)/checker.sh)
 	@mkdir -p $$(BASE) ; \
-	test -L $$(LINK) || ln -s $$(BASENAME) $$(LINK) ; \
+	test -L $$(LINK) || ln -sf $$(BASENAME) $$(LINK) ; \
 	$(M4) vcwc-helpers.m4 \
 		-DTOOL=$(TOOL) \
 		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
@@ -165,7 +165,7 @@ else
 	$$(eval ENC="")
 endif
 	@mkdir -p $$(BASE) ; \
-	test -L $$(LINK) || ln -s $$(BASENAME) $$(LINK) ; \
+	test -L $$(LINK) || ln -sf $$(BASENAME) $$(LINK) ; \
 	$(M4) vcwc-helpers.m4 \
 		-DTOOL=$(TOOL) \
 		-DFILE=$$(patsubst $(PROFILE_BP_DIR)/%,%,$$@) \
