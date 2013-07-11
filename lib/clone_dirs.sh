@@ -10,7 +10,7 @@ list="$source/aspcomp/{instances,benchmarks,participants,profiles}%$target/aspco
 
 for p in $(eval echo $list); do
 
-	declare -a pair=( $(echo $p | tr "%" " ") )
+	declare -a pair=( $(tr '%' ' ' <<< "$p") )
 	test -d ${pair[0]} && sudo cp -avu ${pair[*]}
 
 done
