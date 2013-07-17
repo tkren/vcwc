@@ -292,11 +292,26 @@ submit:
 	@cd $(DAGMAN_DIR) ; condor_submit_dag -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
 
 
+###################################################################################################
+# set BENCHMARK, PARTICIPANT, and optionally INSTANCE and RUN, as command line arguments to make: #
+# 												  #
+# $ make [...] reexec BENCHMARK=b08 PARTICIPANT=s36 [INSTANCE=i0032] [RUN=r001]			  #
+###################################################################################################
+
+INSTANCE ?= %
+RUN ?= %
+
+.PHONY: $(RESCUE_DAG).rerun
+.ONESHELL:
+SHELL = /bin/bash
 $(RESCUE_DAG).rerun:
 	$(eval BMPS := $(filter %/$(PARTICIPANT),$(filter $(BENCHMARK)/%, $(PARTICIPANTS))))
-	$(eval INST := $(notdir $(filter $(BENCHMARK)/%, $(NUM_INSTANCES))))
-	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RUNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+CHECK $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+STATS)) $(TAG_STATS)/$(TRACK)/$(BP)/$(VERSION)) $(TAG_BMRANKING)/$(TRACK)/$(BENCHMARK)/$(VERSION)))
-	@cd $(DAGMAN_DIR) ; tr ' ' '\n' <<< "$(JOBS)" > $@
+	$(eval INST := $(notdir $(filter $(BENCHMARK)/$(INSTANCE), $(NUM_INSTANCES))))
+	$(eval RNS  := $(filter $(RUN), $(RUNS)))
+	$(eval JOBS := $(sort $(foreach BP,$(BMPS),$(foreach I,$(INST),$(foreach R,$(RNS),$(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+EXEC $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+CHECK $(TAG_RUN)/$(TRACK)/$(BP)/$I/$R/$(VERSION)+STATS)) $(TAG_STATS)/$(TRACK)/$(BP)/$(VERSION)) $(TAG_BMRANKING)/$(TRACK)/$(BENCHMARK)/$(VERSION)))
+	@cd $(DAGMAN_DIR) ; \
+	( test -f $@ && cat $@ ; tr ' ' '\n' <<< "$(JOBS)" ) | sort -u > $@.tmp ; \
+	mv $@.tmp $@
 
 $(RESCUE_DAG).sorted:
 	@cd $(DAGMAN_DIR) ; sed "s/^#.*//g" $(RESCUE_DAG) | sort > $@
@@ -304,11 +319,8 @@ $(RESCUE_DAG).sorted:
 $(RESCUE_DAG): $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted
 	@cd $(DAGMAN_DIR) ; \
 	mv --backup=t $@ $@.save ; \
-	join -1 1 -2 2 -v 2 -o 2.1,2.2 $^ > $@ ; \
+	join -1 1 -2 2 -v 2 -o 2.1,2.2 $^ > $@
 
-# set BENCHMARK and PARTICIPANT as command line arguments to make:
-#
-# $ make [...] reexec BENCHMARK=b08 PARTICIPANT=s36
 reexec: $(RESCUE_DAG)
 
 cleanrescue:
