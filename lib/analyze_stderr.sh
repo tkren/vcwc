@@ -12,7 +12,9 @@ do
 
 	echo $d
 
-	find $d -mindepth 3 -maxdepth 3 -name "run_*_stderr" -fprint0 /dev/stdout | xargs -0 egrep -hv $'(^\t|^Command exited)' | sed '/^$/d' | sort | uniq -c | sort -rn | less
+	find $d -mindepth 3 -maxdepth 3 -name "run_*_stderr" -fprint0 /dev/stdout | \
+	    xargs -0 egrep -hv $'(^\t|^Command exited)' | \
+	    sed '/^$/d' | tr [:digit:] "_" | sort -d | uniq -c | sort -rn | less
 
 	echo "-- "
 
