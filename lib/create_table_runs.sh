@@ -4,7 +4,7 @@ set -e
 
 track=${1:?'track unset'}
 
-seq -s' ' 1 21
+seq -s "$(echo -e '\t')" 1 21
 
 echo -e "Timestamp-Statrun\tTimestamp-Execution\tHost\tTrack-ID\tBenchmark-ID\tSolver-ID\tInstance-ID\tRun-ID\tExit-Code-Solver\tExit-Code-Checker\tCost-Solver\tCost-C\
 hecker\tProblem-Type\tWall-Clock-Time\tTime-Grounder\tMemory-Grounder\tTime-Solver\tMemory-Solver\tTime-Combined\tMemory-Combined\tDiscrepancies-Solver"
