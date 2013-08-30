@@ -291,7 +291,7 @@ show:
 	@condor_q -wide -dag | less -S
 
 watch:
-	@watch -n1 "/bin/bash -c \"{ head -n20; echo '[...stripped...]';  tail -n5; } < <(condor_q -dag -wide | sed '/^$/d' | cut -c1-190)\" "
+	@watch -n1 "/bin/bash -c \"{ head -n20; echo '[...stripped...]';  tail -n5; } < <(condor_q -dag -wide | sed '/^$$/d' | cut -c1-150)\" "
 
 submit:
 	@cd $(DAGMAN_DIR) ; _CONDOR_DAGMAN_MAX_SUBMITS_PER_INTERVAL=50 condor_submit_dag -maxjobs 50 -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
@@ -331,6 +331,12 @@ reexec: $(RESCUE_DAG)
 cleanrescue:
 	rm -f $(RESCUE_DAG).rerun $(RESCUE_DAG).sorted
 
+
+tables:
+	./lib/create_table_runs.sh $(STATS_DIR)/$(TRACK) > $(STATS_DIR)/$(TRACK)_runs.dat.new ; \
+	mv -v --backup=t $(STATS_DIR)/$(TRACK)_runs.dat.new $(STATS_DIR)/$(TRACK)_runs.dat ; \
+	./lib/create_table_runmeans.sh $(STATS_DIR)/$(TRACK) > $(STATS_DIR)/$(TRACK)_runmeans.dat.new ; \
+	mv -v --backup=t $(STATS_DIR)/$(TRACK)_runmeans.dat.new $(STATS_DIR)/$(TRACK)_runmeans.dat
 
 dist:
 	tar --totals --xz --absolute-names --transform "s,^$(STATS_DIR)/,,g" --show-transformed -c -f $(STATS_DIR)/$(DIST_FILE).new $(DAGMAN_DIR) $(PROFILE_DIR) $(STATS_DIR)/$(TRACK)
