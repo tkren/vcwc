@@ -288,10 +288,10 @@ clean:
 	@echo FIXME
 
 show:
-	@condor_q -wide -dag | less -S
+	@condor_q -wide -dag aspstat | less -S
 
 watch:
-	@watch -n1 "/bin/bash -c \"{ head -n20; echo '[...stripped...]';  tail -n5; } < <(condor_q -dag -wide | sed '/^$$/d' | cut -c1-150)\" "
+	@watch -n1 "/bin/bash -c \"{ head -n20; echo '[...stripped...]';  tail -n5; } < <(condor_q -dag -wide aspstat | sed '/^$$/d' | cut -c1-150)\" "
 
 submit:
 	@cd $(DAGMAN_DIR) ; _CONDOR_DAGMAN_MAX_SUBMITS_PER_INTERVAL=50 condor_submit_dag -maxjobs 50 -maxidle 100 $(DAGMAN_DIR)/$(TRACKEXEC_DAG)
