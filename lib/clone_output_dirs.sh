@@ -3,9 +3,9 @@
 source=/mnt/lion/home
 target=/home
 
-dirs="$source/aspstat/{t0{1..3},bin,profiles}%$target/aspstat \
-	$source/aspexec/{t0{1..3},bin}%$target/aspexec \
-	$source/aspck/{t0{1..3},bin}%$target/aspck"
+dirs="$source/aspstat/t0{1..3}%$target/aspstat \
+	$source/aspexec/t0{1..3}%$target/aspexec \
+	$source/aspck/t0{1..3}%$target/aspck"
 
 for p in $(eval echo $dirs); do
 

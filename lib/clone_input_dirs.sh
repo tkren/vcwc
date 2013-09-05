@@ -3,7 +3,10 @@
 source=/mnt/lion/home
 target=/home
 
-dirs="$source/aspcomp/{instances,benchmarks,participants,profiles}%$target/aspcomp"
+dirs="$source/aspcomp/{instances,benchmarks,participants,profiles}%$target/aspcomp \
+	$source/aspexec/bin%$target/aspexec \
+	$source/aspck/bin%$target/aspck \
+	$source/aspstat/{bin,profiles}%$target/aspstat"
 
 for p in $(eval echo $dirs); do
 
