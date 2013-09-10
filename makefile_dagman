@@ -339,7 +339,7 @@ tables:
 	mv -v --backup=t $(STATS_DIR)/$(TRACK)_runmeans.dat.new $(STATS_DIR)/$(TRACK)_runmeans.dat
 
 dist:
-	tar --totals --xz --absolute-names --transform "s,^$(STATS_DIR)/,,g" --show-transformed -c -f $(STATS_DIR)/$(DIST_FILE).new $(DAGMAN_DIR) $(PROFILE_DIR) $(STATS_DIR)/$(TRACK)
+	tar --totals --absolute-names --transform "s,^$(STATS_DIR)/,,g" --show-transformed -c $(DAGMAN_DIR) $(PROFILE_DIR) $(STATS_DIR)/$(TRACK) | xz -T12 > $(STATS_DIR)/$(DIST_FILE).new
 	mv -v --backup=t $(STATS_DIR)/$(DIST_FILE).new $(STATS_DIR)/$(DIST_FILE)
 
 
