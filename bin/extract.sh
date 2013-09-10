@@ -13,7 +13,7 @@ rotate_conf=~/bin/aspexec_rotate.conf
 
 # obtain exit code, etc (possibly with fixing magic)
 function repair_output {
-  awk -F' ' 'BEGIN { nans=0; nfac=0; nunk=0; ninc=0; ncos=0; nopt=0; cost=0; ncom=0; ndis=0; }
+  awk -F' ' 'BEGIN { nans=0; nfac=0; nunk=0; ninc=0; ncos=0; nopt=0; split("",cost); ncom=0; ndis=0; }
 
   /^ANSWER/ {
     ans_seen = ! ans_seen;
@@ -39,7 +39,18 @@ function repair_output {
 
   /^COST/ {
     if ( (ninc+nunk > 0) || (nans+nfac == 0) ) { ndis++; }
-    cost=int($2); ncos++; next;
+
+    split("",cost); # portable way to empty cost array
+
+    # we assume non-sparse list of levels
+    for(i = NF; i > 1; i--) {
+      split($i,a,"@");
+      if (a[2]) { j = a[2]; }
+      else      { j = NF - i + 1; }
+      cost[j] = a[1];
+    }
+
+    ncos++; next;
   }
 
   /^OPTIMUM/ {
@@ -62,7 +73,19 @@ function repair_output {
       if (nans+nfac+ncos+nopt+ninc+nunk == 0) { ndis++; nunk++; print "UNKNOWN"; }
       else if (nans > 0 && nfac == 0) { ndis++; nfac++; print ""; }
       else if (nans != nfac) { ndis++; }
-      print nunk, nans, nfac, ninc, ncos, cost, nopt, ncom, ndis;
+
+      l = length(cost);
+
+      if (l) {
+        costlist = cost[l];
+        for (j = l-1; j > 0; j--) {
+          costlist = costlist "," cost[j];
+        }
+      } else {
+        costlist=0;
+      }
+
+      print nunk, nans, nfac, ninc, ncos, costlist, nopt, ncom, ndis;
   }'  $EXEC_STDOUT_FILE | tail -n2 | {
 
       read answer
@@ -74,7 +97,7 @@ function repair_output {
       declare -i num_inconsistent=${things[3]}
       declare -i num_costs=${things[4]}
       if [ $num_costs -ne 0 ]; then
-	declare -i cost=${things[5]}
+	declare cost=${things[5]}
       else
 	declare cost="NA"
       fi
@@ -348,7 +371,25 @@ COST_SOLVER="NA"
 fi
 
 # checker cost
-COST_CHECKER=$(echo $CHECKER_OUTPUT | awk '{print $2}')
+COST_CHECKER=$(echo $CHECKER_OUTPUT | \
+awk '
+{
+  split("",cost); # portable way to empty cost array
+
+  # we assume non-sparse list of levels
+  for(i=2; i<=NF; i++) {
+    split($i,a,"@");
+    if (a[2]) { j=a[2]; }
+    else      { j=length(cost)+1; }
+    cost[j] = a[1];
+  }
+}
+
+END {
+  ORS=","; l = length(cost);
+  for (j=l; j > 1; j--) { print cost[j]; }
+  ORS="\n"; if (l) { print cost[1]; }
+}')
 
 # check if COST is empty
 if [ "$COST_CHECKER" == "" ];then 
