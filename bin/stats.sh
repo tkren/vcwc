@@ -27,7 +27,8 @@ output <- c(t[1,1],t[1,2],t[1,3],t[1,4],t[1,5],t[1,6],t[1,7]);
 # 3. check if all runs have 1. no simultanous SAT _and_ UNSAT answers by the solver, and 2. the same checker output for all runs
 solverOutputs <- t[c(9)][,1];
 checkerOutputs <- t[c(10)][,1];
-solverOk <- ! ( ( (10 %in% solverOutputs) || (11 %in% solverOutputs) || (30 %in% solverOutputs) ) && (20 %in% solverOutputs) );
+#solverOk <- ! ( ( (10 %in% solverOutputs) || (11 %in% solverOutputs) || (30 %in% solverOutputs) ) && (20 %in% solverOutputs) );
+solverOk <- ! ( ( (10 %in% solverOutputs) || (11 %in% solverOutputs) || (30 %in% solverOutputs) ) && (20 %in% solverOutputs || 1 %in% solverOutputs) ) && ! (20 %in% solverOutputs && 1 %in% solverOutputs);
 
 # aggregate checker output
 aggCheckerOutput <- 3
@@ -91,9 +92,9 @@ t <- within(t, memorysolver <- replace(memorysolver, memorysolver > 6*2^30, NaN)
 t <- t[,colSums(is.na(t))<nrow(t)]
 t <- na.omit(t);
 
-pdf(file='$path/$boxplot_file');
-boxplot(t);
-graphics.off();
+#pdf(file='$path/$boxplot_file');
+#boxplot(t);
+#graphics.off();
 
 mins <- sapply(t,min);
 qu <- sapply(t,quantile);
@@ -101,13 +102,18 @@ meds <- sapply(t,median);
 means <- sapply(t,mean);
 maxs <- sapply(t,max);
 
-summary <- rbind(mins, qu[2,], meds, means, qu[4,], maxs);
+if (length(qu) > 0) {
+	summary <- rbind(mins, qu[2,], meds, means, qu[4,], maxs);
+} else {
+	summary <- rbind(mins, qu, meds, means, qu, maxs);
+}
+
 colnames(summary) <- colnames(t);
 rownames(summary) <- c('Min','25Qu','Med','Mean','75Qu','Max');
 
 write.table(summary, file='$path/$summary_file');
-suppressMessages(library(xtable));
-print(xtable(summary), file='$path/$textable_file');
+#suppressMessages(library(xtable));
+#print(xtable(summary), file='$path/$textable_file');
 "
 
 # rotate the statistics and plots
