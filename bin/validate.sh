@@ -461,7 +461,7 @@ read runpid runsid <&5
 exec 5>&-
 
 # now send my stdin to $inputfifo
-cat >&6
+$wallclocklimit -k10 120 cat >&6
 exec 6>&-
 
 # wait until RUN and pipe processes quit
