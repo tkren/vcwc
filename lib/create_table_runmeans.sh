@@ -4,7 +4,7 @@ set -e
 
 track=${1:?'track unset'}
 
-seq -s' ' 1 22
+seq -s "$(echo -e '\t')" 1 22
 
 echo -e "Timestamp-Statrun Timestamp-Execution Host Track-ID Benchmark-ID Solver-ID Instance-ID Stats-Discrepancy Exit-Code-Solver Exit-Code-Checker Min-Cost-Solver Max-Cost-Solver Min-Cost-Checker Max-Cost-Checker Problem-Type Wall-Clock-Time Time-Grounder Memory-Grounder Time-Solver Memory-Solver Time-Combined Memory-Combined"
 
