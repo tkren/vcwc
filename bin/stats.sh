@@ -141,7 +141,26 @@ for d in $(find $path -mindepth 1 -maxdepth 1 -type d); do
 		    \( -exec test -f {}/$stat_file -a -f {}/$exclude_file \; \
 		       -fprintf /dev/stderr "%h/%f/$stat_file\0" \)
 		
-            } | xargs -0 tail -qn1 1>&3 2>&4 3>&- 4>&-
+            } | xargs -0 tail -qn1 | awk '{ for (i=1; i<NF; i++) {
+                                              if (i < 11 || i > 12 || $i == "NA") {
+                                                printf "%s ", $i; 
+                                              } else {
+                                                split($i,xs,",");
+                                                l = length(xs);
+
+                                                split("",costlist);
+
+                                                for (j = 1; j <= l; j++) {
+                                                  split(xs[j],x,"@");
+                                                  if (length(x)>1) { costlist[j] = sprintf("%07d@%02d", x[1], x[2]); }
+                                                  else             { costlist[j] = sprintf("%07d", x[1]); }
+                                                }
+
+                                                for (j = 1; j < l; j++) { printf "%s,", costlist[j]; }
+                                                printf "%s ", costlist[l];
+                                              }
+                                            }
+                                            print $NF; }' 1>&3 2>&4 3>&- 4>&-
 	    
 	} 2>&1 | xargs -0 tail -qn1 | awk '{$NF=$($NF-1)="NA"}1' 3>&- 4>&- #1>&2 3>&- 4>&-
 	
